@@ -150,6 +150,21 @@ transparent tiles with no errors and were adopted. Separately, because Cesium ab
 failed tile for the session, Continuum retries transient failures and replaces a tile that
 still fails with a transparent one.
 
+**Superseded.** The zoom-9 label and feature layers were later replaced. Beyond zoom 9
+Cesium can only magnify them, so names grow and never thin out as the camera closes in,
+and borders stay coarse. Borders and place names now come from OpenFreeMap vector tiles
+(OpenMapTiles `boundary` and `place` layers), drawn for each zoom. Measured on
+2026-11-01:
+- **Tile sizes:** zoom-2 tiles average ~1.1 MB (up to 1.5 MB), against ~0.2 MB at zoom 1
+  and ~0.02 MB from zoom 4, so zoom 2 is never requested.
+- **Over Kerala:** district borders (`admin_level` 5) and their subdivisions (6) are
+  absent at zoom 8 and present at zoom 10.
+- **Tile buffer:** place tiles carry a full tile of buffer. For 60 pairs of neighbouring
+  tiles (five cities, zooms 5–14), all 1 108 places within half a tile of the shared edge
+  were present in both tiles, at the same position. Each tile can therefore decide labels
+  near its edge exactly as its neighbour does, without fetching the neighbour; a unit test
+  covers that decision.
+
 ## 5. Bathymetry, geography, events, weather
 
 - **GEBCO 2026** — WMS GetMap works from browsers (CORS `*`); **GetFeatureInfo returns no

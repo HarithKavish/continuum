@@ -17,6 +17,9 @@ export const ALLOWED_HOSTS = new Set([
   'epqs.nationalmap.gov',
   'gis.ngdc.noaa.gov',
   'nominatim.openstreetmap.org',
+  // Not the app: Cloudflare injects its Web Analytics beacon into every harithkavish.com
+  // page at the edge (a zone-wide setting), so it appears only on the deployed site.
+  'static.cloudflareinsights.com',
 ]);
 
 export async function waitForEngine(page: Page): Promise<void> {

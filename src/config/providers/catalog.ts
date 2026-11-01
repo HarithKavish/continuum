@@ -25,6 +25,35 @@ const gibsCommon = {
 
 const gibsAttribution = 'Imagery: NASA GIBS, part of NASA ESDIS';
 
+const openFreeMapCommon = {
+  organisation: 'OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data',
+  homepageUrl: 'https://openfreemap.org/',
+  endpoint: {
+    url: 'https://tiles.openfreemap.org/planet',
+    protocol: 'mvt',
+    format: 'Mapbox Vector Tiles via TileJSON',
+  },
+  authentication: 'none',
+  cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+  accuracy: { horizontal: null, vertical: null, reference: null },
+  verticalDatum: null,
+  temporal: {
+    kind: 'periodic',
+    description: 'Planet rebuilt regularly; the active build date is reported in the TileJSON URL.',
+  },
+  licence: {
+    name: 'ODbL (data); OpenMapTiles schema (BSD/CC-BY)',
+    url: 'https://www.openstreetmap.org/copyright',
+  },
+  attribution: {
+    short: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
+    full: 'OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL).',
+  },
+  rateLimits: 'No limits on map views; please keep request volume reasonable.',
+  caching: 'Cache-Control on tiles from the provider; TileJSON max-age=3600.',
+  status: 'integrated',
+} as const;
+
 export const PROVIDERS: ProviderMetadata[] = [
   {
     id: 'aws-terrain-tiles',
@@ -282,66 +311,48 @@ export const PROVIDERS: ProviderMetadata[] = [
     status: 'integrated',
   },
   {
-    ...gibsCommon,
-    id: 'gibs-reference-labels',
-    name: 'Place labels',
+    ...openFreeMapCommon,
+    id: 'openfreemap-boundaries',
+    capabilities: ['vector-tiles'],
+    name: 'Administrative borders (OpenFreeMap)',
     category: 'geography',
-    capabilities: ['imagery-tiles'],
-    dataset: 'Reference_Labels',
-    description: 'Transparent place-name labels rendered by GIBS from OpenStreetMap data.',
-    endpoint: {
-      url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
-      protocol: 'wmts-rest',
-      format: 'PNG overlay, EPSG:3857',
+    dataset: 'OpenMapTiles "boundary" layer, planet extract',
+    description:
+      'Country, state and district borders from OpenStreetMap, drawn sharp at every zoom over the imagery.',
+    documentationUrl: 'https://openmaptiles.org/schema/#boundary',
+    coverage: {
+      extent: 'global',
+      description:
+        'Countries (admin_level 2) everywhere; states (3–4) and districts with their subdivisions (5–6, meaning varies by country) where each zoom’s tiles carry them. Over Kerala, districts are absent at zoom 8 and present at zoom 10.',
     },
-    coverage: { extent: 'global', description: 'Global.' },
     resolution:
-      'Rendered to zoom 9 (~300 m pixels); labels stay legible but do not sharpen beyond it.',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    temporal: { kind: 'static', description: 'Static rendering of OpenStreetMap data.' },
-    licence: {
-      name: 'ODbL (OpenStreetMap data); NASA rendering',
-      url: 'https://www.openstreetmap.org/copyright',
-    },
-    attribution: {
-      short: '© OpenStreetMap contributors, rendered by NASA GIBS',
-      full: 'Labels © OpenStreetMap contributors (ODbL), rendered by NASA GIBS.',
-    },
-    caching: 'Static tiles.',
+      'Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0.6 m at the equator), drawn larger beyond it.',
     limitations: [
-      'Raster labels: not searchable or selectable.',
-      'The 15 m variant (Reference_Labels_15m) was rejected: in testing it returned fully opaque black tiles and frequent HTTP 500s.',
+      'Borders are as mapped in OpenStreetMap; disputed borders (flagged in the data) are drawn dashed. Maritime limits are not drawn.',
+      'OpenStreetMap documents no positional accuracy for boundaries, so none is shown.',
+      'Drawn into imagery tiles on the terrain: lines foreshorten when the view is tilted.',
     ],
   },
   {
-    ...gibsCommon,
-    id: 'gibs-reference-features',
-    name: 'Roads and boundaries',
+    ...openFreeMapCommon,
+    id: 'openfreemap-places',
+    capabilities: ['vector-tiles'],
+    name: 'Place names (OpenFreeMap)',
     category: 'geography',
-    capabilities: ['imagery-tiles'],
-    dataset: 'Reference_Features',
+    dataset: 'OpenMapTiles "place" layer, planet extract',
     description:
-      'Transparent roads, borders and features rendered by GIBS from OpenStreetMap data.',
-    endpoint: {
-      url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Features/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
-      protocol: 'wmts-rest',
-      format: 'PNG overlay, EPSG:3857',
+      'Country, state, city, town, village and neighbourhood names, chosen for each zoom and decluttered.',
+    documentationUrl: 'https://openmaptiles.org/schema/#place',
+    coverage: {
+      extent: 'global',
+      description:
+        'Places as mapped in OpenStreetMap; the tiles add smaller places as zoom increases (neighbourhoods at zoom 14).',
     },
-    coverage: { extent: 'global', description: 'Global.' },
-    resolution: 'Rendered to zoom 9 (~300 m pixels).',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    temporal: { kind: 'static', description: 'Static rendering of OpenStreetMap data.' },
-    licence: {
-      name: 'ODbL (OpenStreetMap data); NASA rendering',
-      url: 'https://www.openstreetmap.org/copyright',
-    },
-    attribution: {
-      short: '© OpenStreetMap contributors, rendered by NASA GIBS',
-      full: 'Features © OpenStreetMap contributors (ODbL), rendered by NASA GIBS.',
-    },
-    caching: 'Static tiles.',
+    resolution:
+      'Point positions quantised to 4096 units per tile at each zoom (~0.6 m at the equator at zoom 14).',
     limitations: [
-      'The 15 m variant (Reference_Features_15m) was rejected for the same opaque-tile and HTTP 500 faults as the labels.',
+      'English names (name:en) where mapped, otherwise the local name.',
+      'Labels are drawn into imagery tiles: they are not searchable or selectable, and a name can be cut where tiles of different zoom meet.',
     ],
   },
   {
@@ -548,22 +559,14 @@ export const PROVIDERS: ProviderMetadata[] = [
     status: 'integrated',
   },
   {
+    ...openFreeMapCommon,
     id: 'openfreemap-buildings',
-    name: 'OpenStreetMap buildings (OpenFreeMap)',
-    organisation: 'OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data',
-    category: 'buildings',
     capabilities: ['vector-tiles'],
+    name: 'OpenStreetMap buildings (OpenFreeMap)',
+    category: 'buildings',
     dataset: 'OpenMapTiles "building" layer, planet extract',
     description: 'Building footprints with rendered heights, extruded in 3D at city scale.',
     documentationUrl: 'https://openmaptiles.org/schema/#building',
-    homepageUrl: 'https://openfreemap.org/',
-    endpoint: {
-      url: 'https://tiles.openfreemap.org/planet',
-      protocol: 'mvt',
-      format: 'Mapbox Vector Tiles via TileJSON',
-    },
-    authentication: 'none',
-    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
     coverage: {
       extent: 'global',
       description:
@@ -571,28 +574,10 @@ export const PROVIDERS: ProviderMetadata[] = [
     },
     resolution:
       'Vector geometry quantised to the zoom-14 tile grid (4096 units per tile, ~0.6 m at the equator).',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    verticalDatum: null,
-    temporal: {
-      kind: 'periodic',
-      description:
-        'Planet rebuilt regularly; the active build date is reported in the TileJSON URL.',
-    },
-    licence: {
-      name: 'ODbL (data); OpenMapTiles schema (BSD/CC-BY)',
-      url: 'https://www.openstreetmap.org/copyright',
-    },
-    attribution: {
-      short: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
-      full: 'OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL).',
-    },
-    rateLimits: 'No limits on map views; please keep request volume reasonable.',
-    caching: 'Cache-Control on tiles from the provider; TileJSON max-age=3600.',
     limitations: [
       'Heights come from OSM height or building:levels tags; where neither is mapped, the OpenMapTiles schema assigns a default, so many heights are estimates.',
       'Building bases are placed on the terrain at the footprint centroid.',
     ],
-    status: 'integrated',
   },
   {
     id: 'usgs-earthquakes',

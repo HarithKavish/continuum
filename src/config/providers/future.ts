@@ -31,7 +31,12 @@ export const FUTURE_SOURCES: { name: string; reason: string }[] = [
   {
     name: 'OpenStreetMap standard tiles (tile.openstreetmap.org)',
     reason:
-      'Usage policy discourages applications using it as a default layer; OSM data reaches Continuum through NASA GIBS reference layers and OpenFreeMap instead.',
+      'Usage policy discourages applications using it as a default layer; OSM data reaches Continuum through OpenFreeMap vector tiles instead.',
+  },
+  {
+    name: 'NASA GIBS Reference_Labels and Reference_Features (raster, OpenStreetMap)',
+    reason:
+      'Used in v0.1.0, then replaced. The tiles stop at zoom 9 and are only magnified beyond it, so names grow and never thin out as you zoom in, and borders stay coarse. The 15 m variants returned opaque black tiles and HTTP 500s. Borders and place names now come from OpenFreeMap vector tiles, drawn for each zoom.',
   },
   {
     name: 'Esri World Imagery',
