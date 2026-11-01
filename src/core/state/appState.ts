@@ -6,31 +6,33 @@ import {
   DEFAULT_OVERLAYS,
   defaultImageryDate,
   IMAGERY_LAYERS,
+  OVERLAYS_BEFORE_KNOWN,
   REPLACED_OVERLAYS,
 } from '../../config/providers/layers';
 import type { EarthquakeFeed } from '../../providers/earthquakes/usgs';
 import type { ElevationSample, ObservationRecord, WeatherSample } from '../../providers/base/types';
-import { loadPreferences } from './preferences';
+import { loadPreferences, restoreOverlays } from './preferences';
 import { createStore } from './store';
 
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
 const prefs = loadPreferences();
-const savedOverlays = prefs.overlays?.flatMap((id) =>
-  Object.hasOwn(REPLACED_OVERLAYS, id) ? REPLACED_OVERLAYS[id]! : [id],
-);
+const overlayLayers = IMAGERY_LAYERS.filter((l) => l.role === 'overlay');
+const enabledOverlays = restoreOverlays(prefs, {
+  ids: overlayLayers.map((l) => l.providerId),
+  defaults: DEFAULT_OVERLAYS,
+  replaced: REPLACED_OVERLAYS,
+  legacyKnown: OVERLAYS_BEFORE_KNOWN,
+});
 
 export const layersStore = createStore({
   baseLayer: prefs.baseLayer ?? DEFAULT_BASE_LAYER,
   baseOpacity: 1,
   imageryDate: defaultImageryDate(),
   overlays: Object.fromEntries(
-    IMAGERY_LAYERS.filter((l) => l.role === 'overlay').map((l) => [
+    overlayLayers.map((l) => [
       l.providerId,
-      {
-        enabled: (savedOverlays ?? DEFAULT_OVERLAYS).includes(l.providerId),
-        opacity: l.defaultOpacity,
-      },
+      { enabled: enabledOverlays.has(l.providerId), opacity: l.defaultOpacity },
     ]),
   ) as Record<string, { enabled: boolean; opacity: number }>,
   terrainEnabled: true,
