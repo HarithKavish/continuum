@@ -1,0 +1,62 @@
+name: CI
+
+# Static checks, unit tests and a production build on every pull request. The browser
+# end-to-end suite talks to live public providers and renders with a software GPU, so it
+# runs on demand (workflow_dispatch) rather than on every push.
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      e2e:
+        description: Also run the Playwright end-to-end suite against live providers
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format
+      - run: pnpm test
+      - run: pnpm build
+      - name: Bundle report
+        run: du -sh dist dist/assets dist/cesium dist/data && ls -la dist/assets
+
+  e2e:
+    if: github.event_name == 'workflow_dispatch' && inputs.e2e
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e --workers=1
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results
