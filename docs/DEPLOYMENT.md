@@ -43,14 +43,13 @@ Per [BRANCHING.md](https://github.com/HarithKavish/harithkavish-governance/blob/
 only from `main`. All three long-lived branches are protected (pull request required, the
 `gate` check required, force-push and deletion refused, admins included).
 
-## One-time setup (owner actions)
+## One-time setup
 
-These require account permissions and are not done by any workflow.
+These need account permissions and are not done by any workflow. All were completed on
+2026-11-01; the commands are kept so the setup can be reproduced.
 
-1. **Repository visibility.** The repository was created private. GitHub Pages on a private
-   repository needs a paid plan (the account's branch protection on a private repository
-   shows it has one); the published site is public either way. Make the repository public
-   if the source should be public — a decision for the owner.
+1. **Repository visibility.** Created private, made public on the owner's instruction after
+   a full-history `gitleaks` scan found nothing.
 2. **Enable Pages with the workflow build type**
    (Settings → Pages → Source: *GitHub Actions*), or:
    ```
@@ -62,8 +61,17 @@ These require account permissions and are not done by any workflow.
    ```
    `harithkavish.com` is already a verified Pages domain on the account
    (`protected_domain_state: verified` on sibling sites).
-4. **DNS (Cloudflare, zone `harithkavish.com`)** — add exactly one record; change nothing
-   else. Inspected 2026-11-01: `continuum.harithkavish.com` does not currently resolve.
+4. **Pages environment: only `main` may deploy.** Enabling Pages limits the `github-pages`
+   environment to the default branch, which here is `development`. The first deploy from
+   `main` is therefore rejected ("Branch "main" is not allowed to deploy to github-pages").
+   Allow `main` and remove `development`, as in blog:
+   ```
+   gh api -X POST repos/HarithKavish/continuum/environments/github-pages/deployment-branch-policies -f name=main -f type=branch
+   gh api repos/HarithKavish/continuum/environments/github-pages/deployment-branch-policies   # find development's id
+   gh api -X DELETE repos/HarithKavish/continuum/environments/github-pages/deployment-branch-policies/<id>
+   ```
+5. **DNS (Cloudflare, zone `harithkavish.com`)**: exactly one record, created by the owner;
+   nothing else changed.
 
    | Type | Name | Target | Proxy |
    |---|---|---|---|
@@ -72,9 +80,9 @@ These require account permissions and are not done by any workflow.
    With the proxy on, Cloudflare terminates HTTPS (the zone's existing SSL mode applies, as
    for blog.harithkavish.com). If the proxy is turned off instead, enable *Enforce HTTPS*
    in Pages once GitHub has issued its certificate.
-5. **Automated review secret**: set `CLAUDE_CODE_OAUTH_TOKEN` on the repository so
+6. **Automated review secret**: `CLAUDE_CODE_OAUTH_TOKEN` on the repository, so
    `claude-review.yml` can review pull requests; the required `gate` check waits for its
-   verdict.
+   verdict. Pushed from the `secretctl` vault without the value being displayed.
 
 ## Verifying a deployment
 
@@ -86,9 +94,15 @@ curl -sI https://continuum.harithkavish.com/data/egm96-15min.bin.gz
 curl -sI https://continuum.harithkavish.com/any/deep/link         # serves the app (404.html)
 ```
 
-Then open the site with the browser's network panel: requests go only to the app's own
-origin, `harithkavish.com/design-system`, and the provider hosts listed in
-[DATA_SOURCES.md](DATA_SOURCES.md). The end-to-end suite runs against a deployed site with
+Then open the site with the browser's network panel. Requests go only to:
+- the app's own origin;
+- `harithkavish.com/design-system`;
+- the provider hosts listed in [DATA_SOURCES.md](DATA_SOURCES.md);
+- `static.cloudflareinsights.com`.
+
+The last is Cloudflare Web Analytics. Cloudflare injects its beacon into browser requests
+for every `harithkavish.com` page at the edge, as a zone-wide setting, so it is absent from
+the build and from local previews. The end-to-end suite runs against a deployed site with
 `PLAYWRIGHT_BASE_URL=https://continuum.harithkavish.com pnpm test:e2e --workers=1`.
 
 ## Caching
