@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aerodromeStyle,
   boundaryStyle,
   dataZoomFor,
+  houseNumberStyle,
   labelsForTile,
+  peakStyle,
   placeLabels,
   placeStyle,
+  poiStyle,
   roadLabelStyle,
   roadStyle,
+  waterAreaStyle,
+  waterNameStyle,
+  waterwayLabelStyle,
+  waterwayStyle,
   type AnchoredCandidate,
   type LabelCandidate,
 } from '../../src/spatial/imagery/vectorStyle';
@@ -165,5 +173,105 @@ describe('road styles', () => {
     expect(roadLabelStyle('minor', 14)).toBeNull();
     expect(roadLabelStyle('minor', 15)).not.toBeNull();
     expect(roadLabelStyle('service', 18)).toBeNull();
+  });
+});
+
+describe('water styles', () => {
+  it('adds lakes, then rivers, then ponds and pools as the view closes in', () => {
+    expect(waterAreaStyle('lake', 5, false)).toBeNull();
+    expect(waterAreaStyle('lake', 6, false)).not.toBeNull();
+    expect(waterAreaStyle('pond', 12, false)).toBeNull();
+    expect(waterAreaStyle('pond', 13, false)).not.toBeNull();
+    expect(waterAreaStyle('swimming_pool', 15, false)).toBeNull();
+    expect(waterAreaStyle('swimming_pool', 16, false)).not.toBeNull();
+  });
+
+  it('leaves the sea to the imagery and ignores unknown classes', () => {
+    expect(waterAreaStyle('ocean', 10, false)).toBeNull();
+    expect(waterAreaStyle('constructor', 10, false)).toBeNull();
+    expect(waterwayStyle('toString', 15, false, false)).toBeNull();
+  });
+
+  it('draws seasonal water lighter, with a dashed edge', () => {
+    const seasonal = waterAreaStyle('lake', 12, true)!;
+    const permanent = waterAreaStyle('lake', 12, false)!;
+    expect(seasonal.dash).toBeDefined();
+    expect(permanent.dash).toBeUndefined();
+    expect(seasonal.fill).not.toBe(permanent.fill);
+    expect(waterwayStyle('stream', 14, true, false)!.dash).toBeDefined();
+  });
+
+  it('adds rivers, canals, streams and drains in that order, rivers widest', () => {
+    const first = (cls: string) =>
+      [...Array(20).keys()].find((level) => waterwayStyle(cls, level, false, false));
+    expect(['river', 'canal', 'stream', 'drain'].map(first)).toEqual([8, 10, 12, 14]);
+    expect(waterwayStyle('river', 15, false, false)!.width).toBeGreaterThan(
+      waterwayStyle('canal', 15, false, false)!.width,
+    );
+  });
+
+  it('names rivers before canals, seas from afar and lakes close up', () => {
+    expect(waterwayLabelStyle('river', 11)).not.toBeNull();
+    expect(waterwayLabelStyle('canal', 12)).toBeNull();
+    expect(waterNameStyle('sea', 5)).not.toBeNull();
+    expect(waterNameStyle('sea', 12)).toBeNull();
+    expect(waterNameStyle('lake', 10)).toBeNull();
+    expect(waterNameStyle('lake', 11)!.italic).toBe(true);
+  });
+
+  it('places lake names after every settlement and before points of interest', () => {
+    const lake = waterNameStyle('lake', 15)!.priority;
+    expect(lake).toBeGreaterThan(placeStyle('isolated_dwelling', 999, 15)!.priority);
+    expect(lake).toBeLessThan(aerodromeStyle(15)!.priority);
+    expect(waterNameStyle('sea', 5)!.priority).toBeGreaterThan(
+      placeStyle('state', 999, 5)!.priority,
+    );
+    expect(waterNameStyle('sea', 5)!.priority).toBeLessThan(placeStyle('city', 0, 5)!.priority);
+  });
+});
+
+describe('points of interest', () => {
+  it('shows stations, hospitals, temples and schools first, shops last', () => {
+    expect(poiStyle('hospital', 'hospital', 1, 14)).toBeNull();
+    for (const cls of ['railway', 'hospital', 'place_of_worship', 'school'])
+      expect(poiStyle(cls, '', 5, 15)).not.toBeNull();
+    expect(poiStyle('restaurant', 'restaurant', 1, 16)).toBeNull();
+    expect(poiStyle('restaurant', 'restaurant', 1, 17)).not.toBeNull();
+    expect(poiStyle('railway', 'station', 9, 15)!.priority).toBeLessThan(
+      poiStyle('restaurant', 'restaurant', 1, 17)!.priority,
+    );
+  });
+
+  it('places every point of interest after every place name', () => {
+    const lastPlace = placeStyle('isolated_dwelling', 999, 18)!.priority;
+    expect(poiStyle('railway', 'station', 0, 18)!.priority).toBeGreaterThan(lastPlace);
+  });
+
+  it('leaves out gates, toilets, bus stops and non-government offices', () => {
+    expect(poiStyle('gate', 'gate', 1, 18)).toBeNull();
+    expect(poiStyle('toilets', 'toilets', 1, 18)).toBeNull();
+    expect(poiStyle('bus', 'bus_stop', 1, 18)).toBeNull();
+    expect(poiStyle('bus', 'bus_station', 1, 18)).not.toBeNull();
+    expect(poiStyle('office', 'company', 1, 18)).toBeNull();
+    expect(poiStyle('office', 'government', 1, 18)).not.toBeNull();
+    expect(poiStyle('__proto__', '', 1, 18)).toBeNull();
+  });
+
+  it('marks each group with its own colour', () => {
+    const markers = ['railway', 'hospital', 'place_of_worship', 'school'].map(
+      (cls) => poiStyle(cls, '', 1, 15)!.marker,
+    );
+    expect(new Set(markers).size).toBe(4);
+  });
+
+  it('adds airports and peaks from regional views, house numbers at street level', () => {
+    expect(aerodromeStyle(8)).toBeNull();
+    expect(aerodromeStyle(9)).not.toBeNull();
+    expect(peakStyle(1, 8)).toBeNull();
+    expect(peakStyle(1, 9)).not.toBeNull();
+    expect(houseNumberStyle(17)).toBeNull();
+    expect(houseNumberStyle(18)!.priority).toBeGreaterThan(
+      poiStyle('restaurant', '', 999, 18)!.priority,
+    );
   });
 });

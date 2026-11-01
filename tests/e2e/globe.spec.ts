@@ -82,6 +82,30 @@ test.describe('globe, data and architecture', () => {
     await expect(page.locator('.credits')).toContainText('Overture');
   });
 
+  test('draws points of interest close up, and lakes and rivers regionally, in Tamil Nadu', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await waitForEngine(page);
+    const stats = (id: string) =>
+      page.evaluate(
+        (id) =>
+          (window as any).continuum.engine.imagery.active.get(id).layers[0].imageryProvider.stats,
+        id,
+      );
+    // T. Nagar, Chennai: stations, hospitals, temples and shops from OpenStreetMap.
+    await setView(page, 80.2339, 13.0418, 1_200);
+    await expect
+      .poll(async () => (await stats('openfreemap-places')).pois, { timeout: 90_000 })
+      .toBeGreaterThan(0);
+    // Greater Chennai: its reservoirs and tanks, the Adyar and the Cooum.
+    await setView(page, 80.15, 13.05, 40_000);
+    await expect
+      .poll(async () => (await stats('openfreemap-water')).waterAreas, { timeout: 90_000 })
+      .toBeGreaterThan(0);
+    expect((await stats('openfreemap-water')).waterways).toBeGreaterThan(0);
+  });
+
   test('loops live clouds from EUMETSAT and NASA GIBS, hour by hour', async ({ page }) => {
     const urls = { eumetsat: [] as string[], gibs: 0 };
     page.on('response', (r) => {
