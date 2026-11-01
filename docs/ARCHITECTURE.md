@@ -97,6 +97,11 @@ Cesium objects: components read stores and call engine methods.
   are decluttered by priority, considering candidates up to half a tile beyond each edge so
   neighbouring tiles agree. Each vector tile is fetched once through a bounded queue and
   decoded once, in memory only.
+- **Points of interest and water.** The place-name overlay also places points of interest
+  (by group, after every place name), airports, peaks, lake names and house numbers, in one
+  decluttering pass so none overlaps another. A separate water overlay draws lakes and
+  tanks (seasonal ones lighter and dashed), rivers, canals and drains, with river names
+  along the line.
 - **Roads and building footprints.** The same provider draws OpenFreeMap roads (with names
   laid along the longest straight stretch) and Overture building footprints. Footprints
   come from Overture's PMTiles archive, read by HTTP range request with the `pmtiles`
