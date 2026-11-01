@@ -11,6 +11,7 @@ import {
   mercatorPixelSpacingMeters,
   sampleBilinear,
   terrariumHeight,
+  tileForSample,
   tileXToLon,
   tileYToLat,
   wrapTileX,
@@ -291,5 +292,26 @@ describe('source corrections', () => {
     expect(heights[5]).toBe(0);
     expect(heights[6]).toBe(-20);
     expect(mask[0]).toBe(CORRECTION.arcticDem);
+  });
+});
+
+describe('sampling on a source-tile edge', () => {
+  // A terrain tile whose east edge is the boundary between source tiles 5 and 6 requests
+  // only tile 5. Its edge samples can compute as 6.000000000001 in floating point.
+  const onlyFive = (x: number, y: number) => x === 5 && y === 3;
+
+  it('uses the requested tile for a sample a hair past its edge', () => {
+    expect(tileForSample({ x: 6 + 1e-12, y: 3.5 }, 10, onlyFive)).toEqual({ tx: 5, ty: 3 });
+    expect(tileForSample({ x: 6, y: 3.5 }, 10, onlyFive)).toEqual({ tx: 5, ty: 3 });
+  });
+
+  it('does the same on a row edge and for the neighbour on the other side', () => {
+    expect(tileForSample({ x: 5.5, y: 4 + 1e-12 }, 10, onlyFive)).toEqual({ tx: 5, ty: 3 });
+    const onlySix = (x: number) => x === 6;
+    expect(tileForSample({ x: 6 - 1e-12, y: 3.5 }, 10, onlySix)).toEqual({ tx: 6, ty: 3 });
+  });
+
+  it('reports no tile rather than inventing one', () => {
+    expect(tileForSample({ x: 8.5, y: 3.5 }, 10, onlyFive)).toBeNull();
   });
 });

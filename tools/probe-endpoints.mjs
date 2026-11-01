@@ -15,6 +15,14 @@ const d = day(2);
 const weekAgo = day(8);
 const gibs = (path) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${path}`;
 const terrarium = (t) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${t}.png`;
+// A whole hour two hours back: published by every cloud source, and licence-free at EUMETSAT.
+const hour = new Date(Math.floor((Date.now() - 2 * 3600000) / 3600000) * 3600000)
+  .toISOString()
+  .replace('.000Z', 'Z');
+const eumetview = (layer) =>
+  `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${layer}&styles=&crs=EPSG:3857&bbox=5009377.085697311,0,10018754.171394622,5009377.085697311&width=256&height=256&format=image/png&time=${hour}`;
+const overtureRelease = (await (await fetch('https://stac.overturemaps.org/catalog.json')).json())
+  .latest;
 
 // [kind, id, url, status] — status records the integration decision for the report.
 const probes = [
@@ -133,6 +141,82 @@ const probes = [
     'integrated',
   ],
   ['fetch', 'openfreemap-tilejson', 'https://tiles.openfreemap.org/planet', 'integrated'],
+  // Building footprints, live clouds and national aerial photos
+  ['fetch', 'overture-stac-catalog', 'https://stac.overturemaps.org/catalog.json', 'integrated'],
+  [
+    'range',
+    'overture-buildings-pmtiles',
+    `https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/${overtureRelease}/buildings.pmtiles`,
+    'integrated',
+  ],
+  ['fetch', 'eumetview-msg-iodc-ir108', eumetview('msg_iodc:ir108'), 'integrated'],
+  ['fetch', 'eumetview-msg-fes-ir108', eumetview('msg_fes:ir108'), 'integrated'],
+  [
+    'fetch',
+    'gibs-himawari-band13',
+    gibs(
+      `Himawari_AHI_Band13_Clean_Infrared/default/${hour}/GoogleMapsCompatible_Level6/3/3/6.png`,
+    ),
+    'integrated',
+  ],
+  [
+    'fetch',
+    'gibs-goes-east-band13',
+    gibs(
+      `GOES-East_ABI_Band13_Clean_Infrared/default/${hour}/GoogleMapsCompatible_Level6/3/2/3.png`,
+    ),
+    'integrated',
+  ],
+  [
+    'fetch',
+    'gibs-goes-west-band13',
+    gibs(
+      `GOES-West_ABI_Band13_Clean_Infrared/default/${hour}/GoogleMapsCompatible_Level6/3/1/3.png`,
+    ),
+    'integrated',
+  ],
+  [
+    'img',
+    'ign-orthophotos-paris-z17',
+    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX=17&TILEROW=45086&TILECOL=66390&FORMAT=image/jpeg',
+    'integrated',
+  ],
+  [
+    'img',
+    'pdok-luchtfoto-amsterdam-z17',
+    'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/17/67322/43079.jpeg',
+    'integrated',
+  ],
+  [
+    'img',
+    'swisstopo-swissimage-bern-z17',
+    'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/17/68182/46087.jpeg',
+    'integrated',
+  ],
+  [
+    'img',
+    'basemap-at-orthofoto-wien-z17',
+    'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/17/45421/71473.jpeg',
+    'integrated',
+  ],
+  [
+    'img',
+    'gsi-japan-seamlessphoto-z17',
+    'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116418/51611.jpg',
+    'not used (terms)',
+  ],
+  [
+    'img',
+    'ign-spain-pnoa-z17',
+    'https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&tilematrixset=GoogleMapsCompatible&tilematrix=17&tilerow=50099&tilecol=64122&format=image/jpeg',
+    'not used (fills Portugal)',
+  ],
+  [
+    'fetch',
+    'rainviewer-maps',
+    'https://api.rainviewer.com/public/weather-maps.json',
+    'not used (no satellite frames)',
+  ],
   [
     'openfreemap-tile',
     'openfreemap-vector-tile-z14',

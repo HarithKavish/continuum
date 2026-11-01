@@ -29,9 +29,14 @@ scripts.
   and national datasets), streamed by level of detail, converted to WGS84 ellipsoidal
   heights with EGM96, with source-specific corrections found by testing the live data.
 - **Imagery**: Sentinel-2 cloudless (10 m), NASA GIBS daily MODIS and VIIRS with a date
-  picker, Blue Marble, Black Marble, USGS orthoimagery; overlays for labels, roads,
-  coastlines, surface water, floods, GEBCO 2026 bathymetry, sea-surface temperature and
-  precipitation.
+  picker, Blue Marble, Black Marble, USGS orthoimagery, and national aerial photos (8–30 cm)
+  of France, the Netherlands, Switzerland and Austria; overlays for coastlines, surface
+  water, floods, GEBCO 2026 bathymetry, sea-surface temperature and precipitation.
+- **Map detail drawn for each zoom**: country, state and district borders and place names
+  (OpenStreetMap via OpenFreeMap), roads with street names, and building footprints from
+  Overture Maps (OpenStreetMap with Google and Microsoft machine-detected buildings).
+- **Live clouds**: infrared from five geostationary satellites (EUMETSAT Meteosat, NASA GIBS
+  GOES and Himawari), looping the last four hours.
 - **3D buildings** from OpenStreetMap (OpenFreeMap vector tiles) near the ground.
 - **Live events**: USGS earthquakes (every minute) and NASA EONET natural events.
 - **Inspector**: coordinates, orthometric and ellipsoidal heights, geoid undulation, the

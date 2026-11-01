@@ -1,9 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
+import { DEFAULT_OVERLAYS } from './src/config/providers/layers';
 
 // End-to-end tests run against the production build served by `vite preview`, so they
 // exercise exactly what is deployed. Provider requests go to the real services.
 // Set PLAYWRIGHT_BASE_URL to run the same suite against a deployed site instead.
 const deployed = process.env.PLAYWRIGHT_BASE_URL;
+const baseURL = deployed ?? 'http://localhost:4173';
+// Every test starts with the default layers except live clouds: under a software GPU the
+// cloud loop's renders crowd out everything else. The clouds test turns them on.
+const testPreferences = {
+  overlays: DEFAULT_OVERLAYS.filter((id) => id !== 'geostationary-clouds'),
+};
 export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 120_000,
@@ -12,8 +19,19 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: deployed ?? 'http://localhost:4173',
+    baseURL,
     trace: 'retain-on-failure',
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: new URL(baseURL).origin,
+          localStorage: [
+            { name: 'continuum.preferences.v1', value: JSON.stringify(testPreferences) },
+          ],
+        },
+      ],
+    },
     viewport: { width: 1440, height: 900 },
   },
   projects: [

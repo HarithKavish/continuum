@@ -37,6 +37,8 @@ export const layersStore = createStore({
   exaggeration: 1,
   atmosphere: true,
   lighting: false,
+  /** Whether the live cloud layer loops its recent frames, or holds the newest. */
+  cloudsPlaying: true,
 });
 
 export interface FeedState {
@@ -106,6 +108,8 @@ export const statusStore = createStore({
   lowPower: prefs.lowPower ?? false,
   navSpeed: 1,
   hidden: false,
+  /** Frame time (ISO 8601 UTC) the cloud layer is showing, while it is on. */
+  cloudTime: null as string | null,
 });
 
 export type Tool = 'inspect' | 'distance' | 'area' | 'profile';

@@ -9,12 +9,24 @@ export interface ImageryLayerDefinition {
   label: string;
   /** Group shown in the layer panel. */
   group:
-    'Satellite imagery' | 'Geographic features' | 'Hydrology' | 'Bathymetry and ocean' | 'Weather';
-  kind: 'xyz' | 'wms' | 'vector';
+    | 'Satellite imagery'
+    | 'Aerial photos'
+    | 'Geographic features'
+    | 'Hydrology'
+    | 'Bathymetry and ocean'
+    | 'Weather';
+  /** 'clouds' is the live geostationary layer (CloudLayer), a set of animated frames. */
+  kind: 'xyz' | 'wms' | 'vector' | 'clouds';
   /** URL template; {date} is substituted with the selected UTC date (YYYY-MM-DD). */
   url: string;
-  /** For kind 'vector': which OpenMapTiles layer is drawn (VectorOverlayProvider). */
-  vectorStyle?: 'boundaries' | 'places';
+  /** For kind 'vector': what VectorOverlayProvider draws. */
+  vectorStyle?: 'boundaries' | 'places' | 'roads' | 'buildings';
+  /** Where the provider has data, [west, south, east, north] degrees; nothing is requested outside. */
+  bounds?: [number, number, number, number];
+  /** Shown only on terrain tiles at least this deep (so close-up layers load only close up). */
+  minimumTerrainLevel?: number;
+  /** The provider fills tiles beyond its coverage with pure white; draw that as no data. */
+  whiteIsNoData?: boolean;
   tiling: 'geographic' | 'mercator';
   minimumLevel?: number;
   /** Deepest level requested; Cesium upsamples beyond it rather than requesting more. */
@@ -106,46 +118,36 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
     defaultOpacity: 1,
     hint: 'United States only.',
   },
-  {
-    providerId: 'openfreemap-boundaries',
-    role: 'overlay',
-    label: 'Borders',
-    group: 'Geographic features',
-    kind: 'vector',
-    vectorStyle: 'boundaries',
-    url: 'https://tiles.openfreemap.org/planet',
-    tiling: 'mercator',
-    maximumLevel: 19,
-    dated: false,
-    defaultOpacity: 1,
-    hint: 'Countries; states from continental scale; districts from regional scale.',
-  },
-  {
-    providerId: 'openfreemap-places',
-    role: 'overlay',
-    label: 'Place names',
-    group: 'Geographic features',
-    kind: 'vector',
-    vectorStyle: 'places',
-    url: 'https://tiles.openfreemap.org/planet',
-    tiling: 'mercator',
-    maximumLevel: 19,
-    dated: false,
-    defaultOpacity: 1,
-    hint: 'Fewer, larger places from afar; towns, villages and neighbourhoods as you zoom in.',
-  },
-  {
-    providerId: 'gibs-coastlines',
-    role: 'overlay',
-    label: 'Coastlines',
-    group: 'Geographic features',
-    kind: 'xyz',
-    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Coastlines_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png',
-    tiling: 'mercator',
-    maximumLevel: 13,
-    dated: false,
-    defaultOpacity: 0.8,
-  },
+  aerialPhotos(
+    'ign-orthophotos',
+    'France (IGN, 20 cm)',
+    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
+    19,
+    [-5.3, 41.3, 9.7, 51.2],
+    true,
+  ),
+  aerialPhotos(
+    'pdok-luchtfoto',
+    'Netherlands (PDOK, 8 cm)',
+    'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg',
+    21,
+    [3.2, 50.7, 7.3, 53.7],
+    true,
+  ),
+  aerialPhotos(
+    'swisstopo-swissimage',
+    'Switzerland (swisstopo, 10 cm)',
+    'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+    20,
+    [5.9, 45.8, 10.6, 47.9],
+  ),
+  aerialPhotos(
+    'basemap-at-orthofoto',
+    'Austria (basemap.at)',
+    'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg',
+    20,
+    [9.5, 46.3, 17.2, 49.1],
+  ),
   {
     providerId: 'gibs-surface-water',
     role: 'overlay',
@@ -217,10 +219,131 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
     dated: true,
     defaultOpacity: 0.8,
   },
+  {
+    providerId: 'geostationary-clouds',
+    role: 'overlay',
+    label: 'Live clouds (satellite infrared)',
+    group: 'Weather',
+    kind: 'clouds',
+    url: '',
+    tiling: 'mercator',
+    maximumLevel: 5,
+    dated: false,
+    defaultOpacity: 0.85,
+    hint: 'The last four hours, hour by hour, from five geostationary satellites. Fades out as you zoom in.',
+  },
+  {
+    providerId: 'overture-buildings',
+    role: 'overlay',
+    label: 'Buildings',
+    group: 'Geographic features',
+    kind: 'vector',
+    vectorStyle: 'buildings',
+    url: 'https://stac.overturemaps.org/catalog.json',
+    tiling: 'mercator',
+    maximumLevel: 19,
+    minimumTerrainLevel: 14,
+    dated: false,
+    defaultOpacity: 1,
+    hint: 'Footprints of mapped and machine-detected buildings, at neighbourhood scale.',
+  },
+  {
+    providerId: 'openfreemap-roads',
+    role: 'overlay',
+    label: 'Roads and railways',
+    group: 'Geographic features',
+    kind: 'vector',
+    vectorStyle: 'roads',
+    url: 'https://tiles.openfreemap.org/planet',
+    tiling: 'mercator',
+    maximumLevel: 19,
+    dated: false,
+    defaultOpacity: 1,
+    hint: 'Motorways from afar, down to lanes and footpaths up close, with street names.',
+  },
+  {
+    providerId: 'gibs-coastlines',
+    role: 'overlay',
+    label: 'Coastlines',
+    group: 'Geographic features',
+    kind: 'xyz',
+    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Coastlines_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png',
+    tiling: 'mercator',
+    maximumLevel: 13,
+    dated: false,
+    defaultOpacity: 0.8,
+  },
+  {
+    providerId: 'openfreemap-boundaries',
+    role: 'overlay',
+    label: 'Borders',
+    group: 'Geographic features',
+    kind: 'vector',
+    vectorStyle: 'boundaries',
+    url: 'https://tiles.openfreemap.org/planet',
+    tiling: 'mercator',
+    maximumLevel: 19,
+    dated: false,
+    defaultOpacity: 1,
+    hint: 'Countries; states from continental scale; districts from regional scale.',
+  },
+  {
+    providerId: 'openfreemap-places',
+    role: 'overlay',
+    label: 'Place names',
+    group: 'Geographic features',
+    kind: 'vector',
+    vectorStyle: 'places',
+    url: 'https://tiles.openfreemap.org/planet',
+    tiling: 'mercator',
+    maximumLevel: 19,
+    dated: false,
+    defaultOpacity: 1,
+    hint: 'Fewer, larger places from afar; towns, villages and neighbourhoods as you zoom in.',
+  },
 ];
 
+/**
+ * A national aerial-photo overlay: requested only inside its country's rectangle and only
+ * on close-up terrain, so it adds nothing to the view elsewhere.
+ */
+function aerialPhotos(
+  providerId: string,
+  label: string,
+  url: string,
+  maximumLevel: number,
+  bounds: [number, number, number, number],
+  whiteIsNoData = false,
+): ImageryLayerDefinition {
+  return {
+    providerId,
+    role: 'overlay',
+    label,
+    group: 'Aerial photos',
+    kind: 'xyz',
+    url,
+    tiling: 'mercator',
+    maximumLevel,
+    bounds,
+    minimumTerrainLevel: 12,
+    ...(whiteIsNoData ? { whiteIsNoData } : {}),
+    dated: false,
+    defaultOpacity: 1,
+  };
+}
+
 export const DEFAULT_BASE_LAYER = 'eox-s2cloudless';
-export const DEFAULT_OVERLAYS = ['openfreemap-boundaries', 'openfreemap-places'];
+export const DEFAULT_OVERLAYS = [
+  'ign-orthophotos',
+  'pdok-luchtfoto',
+  'swisstopo-swissimage',
+  'basemap-at-orthofoto',
+  'geostationary-clouds',
+  'overture-buildings',
+  'openfreemap-roads',
+  'openfreemap-boundaries',
+  'openfreemap-places',
+];
 
 /** Overlays that replaced earlier ones, so a reader's saved choice carries over. */
 export const REPLACED_OVERLAYS: Record<string, string[]> = {

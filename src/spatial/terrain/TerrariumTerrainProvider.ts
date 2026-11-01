@@ -35,6 +35,7 @@ import {
   MERCATOR_MAX_LATITUDE,
   sampleBilinear,
   TERRARIUM_TILE_SIZE,
+  tileForSample,
   wrapTileX,
 } from './terrarium';
 import {
@@ -218,15 +219,16 @@ export class TerrariumTerrainProvider {
       for (let i = 0; i < HEIGHTMAP_SIZE; i++) {
         const lon = west + ((east - west) * i) / step;
         const f = lonLatToTileFraction(lon, sampleLat, zoom);
-        const tx = Math.min(2 ** zoom - 1, Math.floor(f.x));
-        const ty = Math.min(2 ** zoom - 1, Math.floor(f.y));
-        const tile = byKey.get(`${wrapTileX(tx, zoom)}/${ty}`);
+        // Samples on a source-tile edge used to fall into the unrequested neighbour and
+        // read 0 m, cutting a trench along that edge (seen as a white line from above).
+        const at = tileForSample(f, zoom, (x, y) => byKey.has(`${x}/${y}`));
+        const tile = at && byKey.get(`${wrapTileX(at.tx, zoom)}/${at.ty}`);
         const orthometric = tile
           ? sampleBilinear(
               tile.heights,
               TERRARIUM_TILE_SIZE,
-              (f.x - tx) * TERRARIUM_TILE_SIZE,
-              (f.y - ty) * TERRARIUM_TILE_SIZE,
+              (f.x - at.tx) * TERRARIUM_TILE_SIZE,
+              (f.y - at.ty) * TERRARIUM_TILE_SIZE,
             )
           : 0;
         out[j * HEIGHTMAP_SIZE + i] = orthometric + geoidUndulation(lat, lon);

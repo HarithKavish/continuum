@@ -20,6 +20,7 @@ import type { FeedState } from '../../core/state/appState';
 
 const GROUPS: ImageryLayerDefinition['group'][] = [
   'Geographic features',
+  'Aerial photos',
   'Hydrology',
   'Bathymetry and ocean',
   'Weather',
@@ -168,6 +169,31 @@ function DateField({ visible, value, max }: { visible: boolean; value: string; m
   );
 }
 
+/** Play or hold the cloud loop, and say which hour is on screen. */
+function CloudControls() {
+  const playing = useLayers((s) => s.cloudsPlaying);
+  const lowPower = useStatus((s) => s.lowPower);
+  const time = useStatus((s) => s.cloudTime);
+  return (
+    <div className="button-row">
+      <button
+        className="button button--secondary button--small"
+        onClick={() => layersStore.set((s) => ({ cloudsPlaying: !s.cloudsPlaying }))}
+        disabled={lowPower}
+        aria-pressed={playing && !lowPower}
+      >
+        {playing && !lowPower ? 'Pause' : 'Play'}
+      </button>
+      <small className="hint" aria-live="off">
+        {time
+          ? `Showing ${time.slice(11, 16)} UTC (${relativeTime(time)})`
+          : 'Waiting for the first frame…'}
+        {lowPower && ' · paused in low-performance mode'}
+      </small>
+    </div>
+  );
+}
+
 function OverlaySection({ group }: { group: ImageryLayerDefinition['group'] }) {
   const overlays = useLayers((s) => s.overlays);
   const imageryDate = useLayers((s) => s.imageryDate);
@@ -200,6 +226,7 @@ function OverlaySection({ group }: { group: ImageryLayerDefinition['group'] }) {
                 ))}
               </div>
             )}
+            {o.enabled && d.kind === 'clouds' && <CloudControls />}
             {o.enabled && (
               <Slider
                 label="Opacity"
@@ -232,6 +259,12 @@ function OverlaySection({ group }: { group: ImageryLayerDefinition['group'] }) {
                 : 'Appear when the camera is within 3 km of the ground.'
           }
         />
+      )}
+      {group === 'Aerial photos' && (
+        <p className="hint">
+          National aerial photography where it is published openly, shown from regional zoom
+          inwards. Elsewhere the base imagery stays (Sentinel-2, 10 m).
+        </p>
       )}
       {group === 'Bathymetry and ocean' && (
         <p className="hint">
