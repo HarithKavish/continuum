@@ -33,8 +33,10 @@ scripts.
   of France, the Netherlands, Switzerland and Austria; overlays for coastlines, surface
   water, floods, GEBCO 2026 bathymetry, sea-surface temperature and precipitation.
 - **Map detail drawn for each zoom**: country, state and district borders and place names
-  (OpenStreetMap via OpenFreeMap), roads with street names, and building footprints from
-  Overture Maps (OpenStreetMap with Google and Microsoft machine-detected buildings).
+  (OpenStreetMap via OpenFreeMap), roads with street names, lakes, tanks, rivers and canals,
+  airports and peaks, and close up stations, hospitals, temples, schools, shops and house
+  numbers; building footprints from Overture Maps (OpenStreetMap with Google and Microsoft
+  machine-detected buildings).
 - **Live clouds**: infrared from five geostationary satellites (EUMETSAT Meteosat, NASA GIBS
   GOES and Himawari), looping the last four hours.
 - **Day and night**: the globe is lit from where the Sun is right now, at every distance, with

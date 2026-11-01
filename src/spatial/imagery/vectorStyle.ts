@@ -1,5 +1,5 @@
-// How the OpenMapTiles boundary and place layers are drawn at each imagery level, and how
-// place labels are decluttered. Pure functions: VectorOverlayProvider does the fetching and
+// How the OpenMapTiles layers (borders, places and points of interest, roads, water) and
+// Overture footprints are drawn at each imagery level, and how labels are decluttered. Pure functions: VectorOverlayProvider does the fetching and
 // the canvas work.
 //
 // Colours are literal, not design-system tokens: these lines and names are drawn over
@@ -276,6 +276,246 @@ export function buildingStyle(level: number): { fill: string; stroke: string; wi
     stroke: 'rgba(255, 236, 214, 0.85)',
     width: level >= 16 ? 0.8 : 0.5,
   };
+}
+
+/** Water areas (OpenMapTiles `water`) by class: first imagery level drawn. Oceans are left to the imagery. */
+const WATER_AREAS: Record<string, number> = {
+  lake: 6,
+  river: 8,
+  pond: 13,
+  dock: 14,
+  swimming_pool: 16,
+};
+
+export function waterAreaStyle(
+  waterClass: string,
+  level: number,
+  intermittent: boolean,
+): { fill: string; stroke: string; width: number; dash?: number[] } | null {
+  const minLevel = Object.hasOwn(WATER_AREAS, waterClass) ? WATER_AREAS[waterClass] : undefined;
+  if (minLevel === undefined || level < minLevel) return null;
+  return {
+    // Seasonal tanks and lakes (common in South India) are drawn lighter, edged with dashes.
+    fill: intermittent ? 'rgba(64, 156, 255, 0.14)' : 'rgba(64, 156, 255, 0.28)',
+    stroke: 'rgba(150, 205, 255, 0.85)',
+    width: level >= 14 ? 1 : 0.6,
+    ...(intermittent ? { dash: [3, 2] } : {}),
+  };
+}
+
+const WATERWAYS: Record<
+  string,
+  { minLevel: number; labelLevel: number; widths: [number, number][] }
+> = {
+  river: {
+    minLevel: 8,
+    labelLevel: 11,
+    widths: [
+      [8, 0.7],
+      [12, 1.6],
+      [15, 3],
+      [18, 8],
+    ],
+  },
+  canal: {
+    minLevel: 10,
+    labelLevel: 13,
+    widths: [
+      [10, 0.6],
+      [14, 1.5],
+      [18, 5],
+    ],
+  },
+  stream: {
+    minLevel: 12,
+    labelLevel: 15,
+    widths: [
+      [12, 0.5],
+      [15, 1],
+      [18, 3],
+    ],
+  },
+  drain: {
+    minLevel: 14,
+    labelLevel: 16,
+    widths: [
+      [14, 0.5],
+      [18, 2],
+    ],
+  },
+  ditch: {
+    minLevel: 14,
+    labelLevel: 16,
+    widths: [
+      [14, 0.5],
+      [18, 2],
+    ],
+  },
+};
+
+/** Style for an OpenMapTiles waterway line, or null if not drawn at this level. */
+export function waterwayStyle(
+  waterwayClass: string,
+  level: number,
+  intermittent: boolean,
+  tunnel: boolean,
+): LineStyle | null {
+  const way = Object.hasOwn(WATERWAYS, waterwayClass) ? WATERWAYS[waterwayClass] : undefined;
+  if (!way || level < way.minLevel) return null;
+  return {
+    width: widthAt(way.widths, level),
+    color: tunnel ? 'rgba(110, 185, 255, 0.35)' : 'rgba(110, 185, 255, 0.9)',
+    ...(intermittent || tunnel ? { dash: [3, 2] } : {}),
+  };
+}
+
+const WATER_LABEL = { size: 8.5, weight: 500, color: '#a5d8ff', italic: true };
+
+/** Names of rivers and canals, along the line. */
+export function waterwayLabelStyle(waterwayClass: string, level: number): LabelStyle | null {
+  const way = Object.hasOwn(WATERWAYS, waterwayClass) ? WATERWAYS[waterwayClass] : undefined;
+  if (!way || level < way.labelLevel) return null;
+  return { ...WATER_LABEL, priority: 1000 + way.labelLevel };
+}
+
+/**
+ * Names of seas and bays from afar, of lakes and reservoirs close up (OpenMapTiles
+ * `water_name`). They are placed with the place names: seas after states, lakes after
+ * every settlement but before airports, peaks and points of interest.
+ */
+export function waterNameStyle(waterClass: string, level: number): LabelStyle | null {
+  const lake = waterClass === 'lake' || waterClass === 'reservoir';
+  if (lake ? level < 11 : level > 9) return null;
+  return { ...WATER_LABEL, size: lake ? 8.5 : 10, priority: lake ? 10_999.5 : 1_999.5 };
+}
+
+/**
+ * Points of interest by group: placed after every place name, in this order, from the
+ * given imagery level (the data is zoom 14, so they appear as the camera closes in).
+ */
+const POI_GROUPS = {
+  transport: { order: 0, minLevel: 15, color: '#b197fc' },
+  health: { order: 1, minLevel: 15, color: '#ff8787' },
+  worship: { order: 2, minLevel: 15, color: '#ffd43b' },
+  education: { order: 3, minLevel: 15, color: '#74c0fc' },
+  civic: { order: 4, minLevel: 16, color: '#dee2e6' },
+  leisure: { order: 5, minLevel: 16, color: '#8ce99a' },
+  commerce: { order: 6, minLevel: 17, color: '#ffc078' },
+} as const;
+type PoiGroup = keyof typeof POI_GROUPS;
+
+/**
+ * OpenMapTiles `poi` classes drawn. Anything else (gates, entrances, toilets, shelters,
+ * ATMs, parking) is left out: in a city they outnumber everything a reader looks for; 448
+ * of 1 486 points in a central Chennai tile were gates (checked 2026-11-01).
+ */
+const POI_CLASSES: Record<string, PoiGroup> = {
+  railway: 'transport',
+  bus: 'transport',
+  aerialway: 'transport',
+  harbor: 'transport',
+  ferry_terminal: 'transport',
+  hospital: 'health',
+  pharmacy: 'health',
+  dentist: 'health',
+  doctors: 'health',
+  place_of_worship: 'worship',
+  school: 'education',
+  college: 'education',
+  library: 'education',
+  town_hall: 'civic',
+  police: 'civic',
+  fire_station: 'civic',
+  post: 'civic',
+  office: 'civic',
+  attraction: 'leisure',
+  museum: 'leisure',
+  zoo: 'leisure',
+  park: 'leisure',
+  stadium: 'leisure',
+  theatre: 'leisure',
+  cinema: 'leisure',
+  art_gallery: 'leisure',
+  castle: 'leisure',
+  monument: 'leisure',
+  golf: 'leisure',
+  swimming: 'leisure',
+  campsite: 'leisure',
+  restaurant: 'commerce',
+  cafe: 'commerce',
+  fast_food: 'commerce',
+  bakery: 'commerce',
+  ice_cream: 'commerce',
+  bar: 'commerce',
+  shop: 'commerce',
+  grocery: 'commerce',
+  clothing_store: 'commerce',
+  bank: 'commerce',
+  lodging: 'commerce',
+  fuel: 'commerce',
+};
+
+/** Subclasses left out of an otherwise drawn class (bus stops, but not bus stations). */
+const POI_SKIPPED_SUBCLASSES = new Set(['bus_stop', 'level_crossing', 'crossing', 'platform']);
+
+export interface PoiStyle extends LabelStyle {
+  /** Colour of the point marker: the group. */
+  marker: string;
+}
+
+/** Style for an OpenMapTiles point of interest, or null if it is not drawn at this level. */
+export function poiStyle(
+  poiClass: string,
+  subclass: string,
+  rank: number,
+  level: number,
+): PoiStyle | null {
+  const groupName = Object.hasOwn(POI_CLASSES, poiClass) ? POI_CLASSES[poiClass] : undefined;
+  if (!groupName || POI_SKIPPED_SUBCLASSES.has(subclass)) return null;
+  // Offices only when they are government offices.
+  if (poiClass === 'office' && subclass !== 'government') return null;
+  const group = POI_GROUPS[groupName];
+  if (level < group.minLevel) return null;
+  return {
+    priority: 20_000 + group.order * 1000 + Math.min(Math.max(rank, 0), 999),
+    size: 8,
+    weight: 500,
+    color: 'rgba(255, 255, 255, 0.95)',
+    dot: true,
+    marker: group.color,
+  };
+}
+
+/** Mountain peaks with their height, from regional views. */
+export function peakStyle(rank: number, level: number): PoiStyle | null {
+  if (level < 9) return null;
+  return {
+    priority: 12_000 + Math.min(Math.max(rank, 0), 999),
+    size: 8.5,
+    weight: 500,
+    color: '#fff',
+    dot: true,
+    marker: '#e9ecef',
+  };
+}
+
+/** Airports, from regional views. */
+export function aerodromeStyle(level: number): PoiStyle | null {
+  if (level < 9) return null;
+  return {
+    priority: 11_000,
+    size: 8.5,
+    weight: 600,
+    color: '#fff',
+    dot: true,
+    marker: POI_GROUPS.transport.color,
+  };
+}
+
+/** House numbers, at street level only; placed last. */
+export function houseNumberStyle(level: number): LabelStyle | null {
+  if (level < 18) return null;
+  return { priority: 30_000, size: 7, weight: 400, color: 'rgba(255, 255, 255, 0.8)' };
 }
 
 export interface LabelStyle {

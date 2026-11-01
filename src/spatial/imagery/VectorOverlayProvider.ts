@@ -1,9 +1,9 @@
 // A Cesium imagery provider that draws vector tiles into transparent tiles: borders, place
-// names and roads from OpenFreeMap, or building footprints from Overture. Each imagery
-// level is drawn from the vector
-// data for that zoom (dataZoomFor), so detail is added and names thin out or fill in as
-// the camera moves, and text stays the same size on screen at every level — unlike a
-// raster label layer, which stops at its last zoom and is then only magnified.
+// names with points of interest, roads and water from OpenFreeMap, or building footprints
+// from Overture. Each imagery level is drawn from the vector data for that zoom
+// (dataZoomFor), so detail is added and names thin out or fill in as the camera moves, and
+// text stays the same size on screen at every level — unlike a raster label layer, which
+// stops at its last zoom and is then only magnified.
 
 import { Event, WebMercatorTilingScheme, type Credit } from 'cesium';
 import type { VectorTile, VectorTileFeature } from '@mapbox/vector-tile';
@@ -13,21 +13,33 @@ import {
   OVERTURE_MAX_ZOOM,
 } from '../../providers/geography/overtureBuildings';
 import {
+  aerodromeStyle,
   BUILDING_MIN_LEVEL,
   boundaryStyle,
   buildingStyle,
   dataZoomFor,
+  houseNumberStyle,
   labelsForTile,
+  peakStyle,
   placeStyle,
+  poiStyle,
   roadLabelStyle,
   roadStyle,
+  waterAreaStyle,
+  waterNameStyle,
+  waterwayLabelStyle,
+  waterwayStyle,
   type AnchoredCandidate,
   type LabelStyle,
   type LineStyle,
+  type PoiStyle,
   type RoadStyle,
 } from './vectorStyle';
 
-export type VectorOverlayStyle = 'boundaries' | 'places' | 'roads' | 'buildings';
+export type VectorOverlayStyle = 'boundaries' | 'places' | 'roads' | 'water' | 'buildings';
+
+/** Water is drawn from this imagery level; nothing is fetched for coarser tiles. */
+const WATER_MIN_LEVEL = 6;
 
 /** Declared tile size; tiles are drawn at twice this so text stays sharp on screen. */
 const TILE = 256;
@@ -66,6 +78,35 @@ interface DecodedPlaces {
   extent: number;
   places: { cls: string; rank: number; name: string; x: number; y: number }[];
 }
+/**
+ * Points of interest, peaks, airports, lake names and house numbers: placed with the place
+ * names, so none of them overlaps another.
+ */
+interface DecodedPoints {
+  extent: number;
+  points: {
+    kind: 'poi' | 'peak' | 'aerodrome' | 'water' | 'house';
+    cls: string;
+    subclass: string;
+    rank: number;
+    name: string;
+    x: number;
+    y: number;
+  }[];
+}
+interface DecodedWater {
+  extent: number;
+  areas: { cls: string; intermittent: boolean; rings: { x: number; y: number }[][] }[];
+  ways: {
+    cls: string;
+    intermittent: boolean;
+    tunnel: boolean;
+    name: string;
+    rings: { x: number; y: number }[][];
+  }[];
+  /** Names of seas and straits drawn along lines; point names go with the place names. */
+  lineNames: { cls: string; name: string; rings: { x: number; y: number }[][] }[];
+}
 interface DecodedRoads {
   extent: number;
   lines: { cls: string; tunnel: boolean; rings: { x: number; y: number }[][] }[];
@@ -88,6 +129,8 @@ function memo<T>(cache: WeakMap<VectorTile, T>, tile: VectorTile, build: () => T
 
 const boundaryCache = new WeakMap<VectorTile, DecodedBoundaries>();
 const placeCache = new WeakMap<VectorTile, DecodedPlaces>();
+const pointCache = new WeakMap<VectorTile, DecodedPoints>();
+const waterCache = new WeakMap<VectorTile, DecodedWater>();
 const roadCache = new WeakMap<VectorTile, DecodedRoads>();
 const buildingCache = new WeakMap<VectorTile, DecodedBuildings>();
 
@@ -123,6 +166,92 @@ function decodePlaces(tile: VectorTile): DecodedPlaces {
         name,
         x: point.x,
         y: point.y,
+      });
+    }
+    return decoded;
+  });
+}
+
+function decodePoints(tile: VectorTile): DecodedPoints {
+  return memo(pointCache, tile, () => {
+    const decoded: DecodedPoints = { extent: tile.layers['place']?.extent ?? 4096, points: [] };
+    const read = (layerName: string, kind: DecodedPoints['points'][number]['kind']) => {
+      const layer = tile.layers[layerName];
+      for (let i = 0; layer && i < layer.length; i++) {
+        const f = layer.feature(i);
+        // Names of seas and straits can be lines; those are drawn along them with the water.
+        if (f.type !== 1) continue;
+        const point = f.loadGeometry()[0]?.[0];
+        if (!point) continue;
+        const p = f.properties;
+        let name = kind === 'house' ? String(p['housenumber'] ?? '').trim() : placeName(p);
+        if (kind === 'peak' && name && typeof p['ele'] === 'number')
+          name = `${name} ${Math.round(p['ele']).toLocaleString('en')} m`;
+        if (kind === 'aerodrome' && name && typeof p['iata'] === 'string' && p['iata'])
+          name = `${name} (${p['iata']})`;
+        if (!name) continue;
+        // Points share the tile's coordinate space; scale if a layer's extent differs.
+        const k = decoded.extent / layer.extent;
+        decoded.points.push({
+          kind,
+          cls: String(p['class'] ?? ''),
+          subclass: String(p['subclass'] ?? ''),
+          rank: Number(p['rank'] ?? 999),
+          name,
+          x: point.x * k,
+          y: point.y * k,
+        });
+      }
+    };
+    read('aerodrome_label', 'aerodrome');
+    read('mountain_peak', 'peak');
+    read('water_name', 'water');
+    read('poi', 'poi');
+    read('housenumber', 'house');
+    return decoded;
+  });
+}
+
+function decodeWater(tile: VectorTile): DecodedWater {
+  return memo(waterCache, tile, () => {
+    const water = tile.layers['water'];
+    const ways = tile.layers['waterway'];
+    const names = tile.layers['water_name'];
+    const decoded: DecodedWater = {
+      extent: water?.extent ?? ways?.extent ?? 4096,
+      areas: [],
+      ways: [],
+      lineNames: [],
+    };
+    for (let i = 0; water && i < water.length; i++) {
+      const f = water.feature(i);
+      const cls = String(f.properties['class'] ?? '');
+      if (f.type !== 3 || cls === 'ocean') continue; // the sea is left to the imagery
+      decoded.areas.push({
+        cls,
+        intermittent: isTrue(f.properties['intermittent']),
+        rings: f.loadGeometry(),
+      });
+    }
+    for (let i = 0; ways && i < ways.length; i++) {
+      const f = ways.feature(i);
+      if (f.type !== 2) continue;
+      decoded.ways.push({
+        cls: String(f.properties['class'] ?? ''),
+        intermittent: isTrue(f.properties['intermittent']),
+        tunnel: f.properties['brunnel'] === 'tunnel',
+        name: placeName(f.properties),
+        rings: f.loadGeometry(),
+      });
+    }
+    for (let i = 0; names && i < names.length; i++) {
+      const f = names.feature(i);
+      const name = placeName(f.properties);
+      if (!name || f.type !== 2) continue;
+      decoded.lineNames.push({
+        cls: String(f.properties['class'] ?? ''),
+        name,
+        rings: f.loadGeometry(),
       });
     }
     return decoded;
@@ -238,10 +367,13 @@ function textWidth(ctx: CanvasRenderingContext2D, text: string): number {
 interface PlaceLabel extends AnchoredCandidate {
   style: LabelStyle;
   font: string;
+  /** Colour of the point marker, when it differs from the text's. */
+  marker?: string;
 }
 
-interface RoadLabel extends AnchoredCandidate {
+interface LineLabel extends AnchoredCandidate {
   font: string;
+  color: string;
   /** Radians, kept between -90 and 90 degrees so names never read upside down. */
   angle: number;
 }
@@ -257,6 +389,9 @@ export class VectorOverlayProvider {
   readonly errorEvent = new Event();
   readonly hasAlphaChannel = true;
   readonly proxy = undefined;
+
+  /** What has been drawn so far, for diagnostics and the end-to-end tests. */
+  readonly stats = { pois: 0, waterAreas: 0, waterways: 0 };
 
   constructor(
     private readonly providerId: string,
@@ -276,6 +411,7 @@ export class VectorOverlayProvider {
     const canvas = Object.assign(document.createElement('canvas'), { width: PX, height: PX });
     const buildings = this.style === 'buildings';
     if (buildings && level < BUILDING_MIN_LEVEL) return canvas;
+    if (this.style === 'water' && level < WATER_MIN_LEVEL) return canvas;
     const dz = buildings ? Math.min(level, OVERTURE_MAX_ZOOM) : dataZoomFor(level);
     const shift = level - dz;
     const data = buildings
@@ -284,7 +420,7 @@ export class VectorOverlayProvider {
     if (!data) return canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
-    if (this.style === 'places' || this.style === 'roads') await document.fonts.ready;
+    if (this.style !== 'boundaries' && this.style !== 'buildings') await document.fonts.ready;
     // Data-tile units → this tile's canvas pixels.
     const toCanvas = (extent: number) => {
       const k = (2 ** shift * PX) / extent;
@@ -294,8 +430,10 @@ export class VectorOverlayProvider {
     };
     if (this.style === 'boundaries')
       this.drawBoundaries(ctx, decodeBoundaries(data), level, toCanvas);
-    else if (this.style === 'places') this.drawPlaces(ctx, decodePlaces(data), level, toCanvas);
+    else if (this.style === 'places')
+      this.drawPlaces(ctx, decodePlaces(data), decodePoints(data), level, toCanvas);
     else if (this.style === 'roads') this.drawRoads(ctx, decodeRoads(data), level, toCanvas);
+    else if (this.style === 'water') this.drawWater(ctx, decodeWater(data), level, toCanvas);
     else this.drawBuildings(ctx, decodeBuildings(data), level, toCanvas);
     return canvas;
   }
@@ -318,24 +456,35 @@ export class VectorOverlayProvider {
     this.drawRoadNames(ctx, data, level, project);
   }
 
-  /** Each name along the longest straight stretch of its road, where it fits. */
+  /** Each name along the longest straight stretch of its line, where it fits. */
   private drawRoadNames(
     ctx: CanvasRenderingContext2D,
     data: DecodedRoads,
     level: number,
     project: (x: number, y: number) => [number, number],
   ): void {
-    const candidates: RoadLabel[] = [];
+    const named: { name: string; style: LabelStyle; rings: Ring[] }[] = [];
     for (const road of data.names) {
       const style = roadLabelStyle(road.cls, level);
-      if (!style) continue;
+      if (style) named.push({ name: road.name, style, rings: road.rings });
+    }
+    this.drawLineLabels(ctx, named, project);
+  }
+
+  private drawLineLabels(
+    ctx: CanvasRenderingContext2D,
+    named: { name: string; style: LabelStyle; rings: Ring[] }[],
+    project: (x: number, y: number) => [number, number],
+  ): void {
+    const candidates: LineLabel[] = [];
+    for (const { name, style, rings } of named) {
       const font = this.font(style);
       ctx.font = font;
       ctx.letterSpacing = '0px';
-      const width = textWidth(ctx, road.name);
+      const width = textWidth(ctx, name);
       const height = style.size * SCALE;
       let best: { a: [number, number]; b: [number, number]; length: number } | null = null;
-      for (const ring of road.rings)
+      for (const ring of rings)
         for (let j = 1; j < ring.length; j++) {
           const a = project(ring[j - 1]!.x, ring[j - 1]!.y);
           const b = project(ring[j]!.x, ring[j]!.y);
@@ -352,8 +501,9 @@ export class VectorOverlayProvider {
       const hw = (Math.abs(Math.cos(angle)) * width + Math.abs(Math.sin(angle)) * height) / 2;
       const hh = (Math.abs(Math.sin(angle)) * width + Math.abs(Math.cos(angle)) * height) / 2;
       candidates.push({
-        text: road.name,
+        text: name,
         font,
+        color: style.color,
         angle,
         anchor: [mx, my],
         priority: style.priority,
@@ -372,10 +522,79 @@ export class VectorOverlayProvider {
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
       ctx.lineWidth = 2.5 * SCALE;
       ctx.strokeText(c.text, 0, 0);
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = c.color;
       ctx.fillText(c.text, 0, 0);
       ctx.restore();
     }
+  }
+
+  private drawWater(
+    ctx: CanvasRenderingContext2D,
+    data: DecodedWater,
+    level: number,
+    toCanvas: (extent: number) => (x: number, y: number) => [number, number],
+  ): void {
+    const project = toCanvas(data.extent);
+    ctx.lineJoin = 'round';
+    for (const area of data.areas) {
+      const style = waterAreaStyle(area.cls, level, area.intermittent);
+      if (!style) continue;
+      ctx.beginPath();
+      traceRings(ctx, area.rings, project, true);
+      ctx.fillStyle = style.fill;
+      ctx.fill('evenodd');
+      ctx.strokeStyle = style.stroke;
+      ctx.lineWidth = style.width * SCALE;
+      ctx.setLineDash(style.dash ? style.dash.map((d) => d * SCALE) : []);
+      ctx.stroke();
+      this.stats.waterAreas++;
+    }
+    ctx.setLineDash([]);
+    const lines: { style: LineStyle; rings: Ring[] }[] = [];
+    const named: { name: string; style: LabelStyle; rings: Ring[] }[] = [];
+    for (const way of data.ways) {
+      const style = waterwayStyle(way.cls, level, way.intermittent, way.tunnel);
+      if (!style) continue;
+      lines.push({ style, rings: way.rings });
+      this.stats.waterways++;
+      const label = way.name ? waterwayLabelStyle(way.cls, level) : null;
+      if (label) named.push({ name: way.name, style: label, rings: way.rings });
+    }
+    // Wider rivers last, over the streams and drains that join them.
+    lines.sort((a, b) => a.style.width - b.style.width);
+    strokeLines(ctx, lines, project);
+    for (const water of data.lineNames) {
+      const style = waterNameStyle(water.cls, level);
+      if (style) named.push({ name: water.name, style, rings: water.rings });
+    }
+    this.drawLineLabels(ctx, named, project);
+  }
+
+  /** A label candidate at a point, or null when it is too far outside the tile to matter. */
+  private pointLabel(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    style: LabelStyle,
+    [ax, ay]: [number, number],
+    marker?: string,
+  ): PlaceLabel | null {
+    if (ax < -MARGIN || ay < -MARGIN || ax > PX + MARGIN || ay > PX + MARGIN) return null;
+    const font = this.font(style);
+    ctx.font = font;
+    ctx.letterSpacing = style.upper ? `${SCALE}px` : '0px';
+    const width = textWidth(ctx, text);
+    const height = style.size * SCALE;
+    const left = style.dot ? ax - DOT_RADIUS : ax - width / 2;
+    const right = style.dot ? ax + DOT_GAP + width : ax + width / 2;
+    return {
+      text,
+      style,
+      font,
+      ...(marker ? { marker } : {}),
+      anchor: [ax, ay],
+      priority: style.priority,
+      box: [left, ay - height / 2, right, ay + height / 2],
+    };
   }
 
   private drawBuildings(
@@ -422,36 +641,46 @@ export class VectorOverlayProvider {
   private drawPlaces(
     ctx: CanvasRenderingContext2D,
     data: DecodedPlaces,
+    points: DecodedPoints,
     level: number,
     toCanvas: (extent: number) => (x: number, y: number) => [number, number],
   ): void {
     const project = toCanvas(data.extent);
+    const projectPoint = toCanvas(points.extent);
     const candidates: PlaceLabel[] = [];
+    const add = (label: PlaceLabel | null) => {
+      if (label) candidates.push(label);
+    };
     for (const place of data.places) {
       const style = placeStyle(place.cls, place.rank, level);
       if (!style) continue;
-      const [ax, ay] = project(place.x, place.y);
-      if (ax < -MARGIN || ay < -MARGIN || ax > PX + MARGIN || ay > PX + MARGIN) continue;
       const text = style.upper ? place.name.toLocaleUpperCase() : place.name;
-      const font = this.font(style);
-      ctx.font = font;
-      ctx.letterSpacing = style.upper ? `${SCALE}px` : '0px';
-      const width = textWidth(ctx, text);
-      const height = style.size * SCALE;
-      const left = style.dot ? ax - DOT_RADIUS : ax - width / 2;
-      const right = style.dot ? ax + DOT_GAP + width : ax + width / 2;
-      candidates.push({
-        text,
-        style,
-        font,
-        anchor: [ax, ay],
-        priority: style.priority,
-        box: [left, ay - height / 2, right, ay + height / 2],
-      });
+      add(this.pointLabel(ctx, text, style, project(place.x, place.y)));
     }
+    for (const point of points.points) {
+      const style: LabelStyle | PoiStyle | null =
+        point.kind === 'poi'
+          ? poiStyle(point.cls, point.subclass, point.rank, level)
+          : point.kind === 'peak'
+            ? peakStyle(point.rank, level)
+            : point.kind === 'aerodrome'
+              ? aerodromeStyle(level)
+              : point.kind === 'water'
+                ? waterNameStyle(point.cls, level)
+                : houseNumberStyle(level);
+      if (!style) continue;
+      const marker = (style as Partial<PoiStyle>).marker;
+      add(this.pointLabel(ctx, point.name, style, projectPoint(point.x, point.y), marker));
+    }
+    const kept = labelsForTile(candidates, PX, MARGIN, LABEL_PADDING);
+    this.stats.pois += kept.filter((c) => c.marker).length;
+    this.drawLabels(ctx, kept);
+  }
+
+  private drawLabels(ctx: CanvasRenderingContext2D, labels: PlaceLabel[]): void {
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    for (const c of labelsForTile(candidates, PX, MARGIN, LABEL_PADDING)) {
+    for (const c of labels) {
       const [ax, ay] = c.anchor;
       ctx.font = c.font;
       ctx.letterSpacing = c.style.upper ? `${SCALE}px` : '0px';
@@ -465,6 +694,7 @@ export class VectorOverlayProvider {
       if (c.style.dot) {
         ctx.beginPath();
         ctx.arc(ax, ay, DOT_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = c.marker ?? c.style.color;
         ctx.fill();
         ctx.lineWidth = SCALE;
         ctx.stroke();

@@ -2,6 +2,26 @@
 
 export const FUTURE_SOURCES: { name: string; reason: string }[] = [
   {
+    name: 'ISRO Bhuvan WMS and tile cache (India)',
+    reason:
+      'Both answer (bhuvan-vec1 WMS, bhuvan-ras2 tile cache) but send no CORS headers (checked 2026-11-01), so a browser on another site cannot read them. OpenStreetMap data covers the same roads, water and places.',
+  },
+  {
+    name: 'Bharatmaps (NIC, India)',
+    reason:
+      'Its certificate chain did not verify against the Mozilla root store (SELF_SIGNED_CERT_IN_CHAIN, checked 2026-11-01); not evaluated further.',
+  },
+  {
+    name: 'TN-GIS (Tamil Nadu e-Governance Agency)',
+    reason:
+      'Its layers and Web API services sit behind an official or public account login, and its map viewer asks for GeoServer credentials (checked 2026-11-01).',
+  },
+  {
+    name: 'Overture Maps places',
+    reason:
+      'Browser-accessible and CDLA-Permissive-2.0, but heavy where it is densest: a zoom-14 tile over central Chennai is 4.3 MB (5 356 places), over Madurai 3.1 MB (3 857) (checked 2026-11-01). Points of interest come from OpenStreetMap instead, at about a tenth of the size.',
+  },
+  {
     name: 'Copernicus DEM GLO-30 / GLO-90 (direct)',
     reason:
       'Copernicus Data Space downloads need registration. The public AWS copies (copernicus-dem-30m) send no CORS headers, so a browser cannot read them. GLO-90 point values are available through Open-Meteo instead.',
