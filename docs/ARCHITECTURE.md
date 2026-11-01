@@ -69,7 +69,19 @@ Cesium objects: components read stores and call engine methods.
 
 - **Request-render mode.** Cesium renders only when something changes. Frames are
   requested while tiles load (and for 3 s after load activity, so late textures are
-  drawn), while the camera moves, and when data changes.
+  drawn), while the camera moves, when data changes, and at least every 10 s of clock time
+  so the Sun's light keeps moving.
+- **Time and light.** The Cesium clock runs in real time. Cesium places the Sun with its
+  Simon et al. (1994) series in the ICRF and rotates it into Earth-fixed coordinates with
+  the IAU 2006 precession-nutation tables it ships (preloaded around the current time).
+  Realistic lighting turns on Cesium's globe shading. Cesium fades that shading out within
+  about 3,600 km of the ground, together with the ground atmosphere (forcing it on brings
+  the atmosphere back and washes close-up views out), so a globe material
+  (`rendering/daylight.ts`) applies exactly the shading Cesium leaves out at the camera's
+  distance, and 3D buildings use the same term. Black Marble city lights are an imagery
+  layer drawn only on the night side (Cesium's `nightAlpha`/`dayAlpha`), brightened by the
+  inverse of Cesium's 30% night shading, and faded to a glow below 800 km because their
+  pixels are about 500 m across. Full daylight removes all three.
 - **Input loop.** A separate `requestAnimationFrame` loop samples the gamepad, keyboard and
   on-screen sticks every frame — independent of rendering — and requests a render only
   when input moves the camera.
@@ -133,8 +145,9 @@ interpolation, not synthetic detail.
 `uiStore`, and `gamepadStore`. `useStore` subscribes a component to a slice and re-renders
 only when that slice changes (shallow comparison).
 
-**Persistence.** Only the reader's own preferences — base layer, enabled overlays,
-low-performance mode, controller profile — are written, to `localStorage` key
+**Persistence.** Only the reader's own preferences — base layer, enabled overlays (and the
+overlays offered when they were saved, so overlays added later start at their defaults),
+day/night lighting, low-performance mode, controller profile — are written, to `localStorage` key
 `continuum.preferences.v1`, with every access guarded. Provider data is never written to
 any storage. The shared design system keeps the ecosystem theme in its own `hk.*` key and
 a `.harithkavish.com` cookie. An end-to-end test asserts this.
@@ -157,7 +170,7 @@ the live shared system, and pinning a hash would break Continuum on each release
 | Engine chunk (CesiumJS), loaded lazily | 4.2 MB (1.13 MB gzip) |
 | EGM96 grid | 937 KB, loaded once |
 | Decoded terrain cache | ≤ 160 tiles (~40 MB) |
-| Idle cost | No rendering; feeds paused when the tab is hidden |
+| Idle cost | One frame per 10 s of clock time (the Sun moves); feeds paused when the tab is hidden |
 
 Low-performance mode lowers the resolution scale, uses coarser terrain
 (`maximumScreenSpaceError` 4) and disables MSAA.

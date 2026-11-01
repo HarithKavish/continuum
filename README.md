@@ -37,6 +37,9 @@ scripts.
   Overture Maps (OpenStreetMap with Google and Microsoft machine-detected buildings).
 - **Live clouds**: infrared from five geostationary satellites (EUMETSAT Meteosat, NASA GIBS
   GOES and Himawari), looping the last four hours.
+- **Day and night**: the globe is lit from where the Sun is right now, at every distance, with
+  NASA Black Marble city lights on the night side; one button (or L) switches to full
+  daylight.
 - **3D buildings** from OpenStreetMap (OpenFreeMap vector tiles) near the ground.
 - **Live events**: USGS earthquakes (every minute) and NASA EONET natural events.
 - **Inspector**: coordinates, orthometric and ellipsoidal heights, geoid undulation, the
