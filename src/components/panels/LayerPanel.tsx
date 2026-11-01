@@ -400,8 +400,8 @@ function DisplaySection() {
       <Toggle
         checked={lighting}
         onChange={(v) => layersStore.set({ lighting: v })}
-        label="Sun lighting"
-        hint="Shades the globe by the Sun's position when the page was opened."
+        label="Realistic day and night"
+        hint="Lit by the Sun's position now, with city lights on the night side. Off: full daylight everywhere (L)."
       />
       <Toggle
         checked={lowPower}
