@@ -6,6 +6,7 @@ import {
   DEFAULT_OVERLAYS,
   defaultImageryDate,
   IMAGERY_LAYERS,
+  REPLACED_OVERLAYS,
 } from '../../config/providers/layers';
 import type { EarthquakeFeed } from '../../providers/earthquakes/usgs';
 import type { ElevationSample, ObservationRecord, WeatherSample } from '../../providers/base/types';
@@ -15,6 +16,7 @@ import { createStore } from './store';
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
 const prefs = loadPreferences();
+const savedOverlays = prefs.overlays?.flatMap((id) => REPLACED_OVERLAYS[id] ?? [id]);
 
 export const layersStore = createStore({
   baseLayer: prefs.baseLayer ?? DEFAULT_BASE_LAYER,
@@ -24,7 +26,7 @@ export const layersStore = createStore({
     IMAGERY_LAYERS.filter((l) => l.role === 'overlay').map((l) => [
       l.providerId,
       {
-        enabled: (prefs.overlays ?? DEFAULT_OVERLAYS).includes(l.providerId),
+        enabled: (savedOverlays ?? DEFAULT_OVERLAYS).includes(l.providerId),
         opacity: l.defaultOpacity,
       },
     ]),

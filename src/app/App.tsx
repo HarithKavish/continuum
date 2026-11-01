@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { InspectorPanel } from '../components/panels/InspectorPanel';
 import { LayerPanel } from '../components/panels/LayerPanel';
 import { StatusBar } from '../components/panels/StatusBar';
-import { Toolbar } from '../components/controls/Toolbar';
 import { Crosshair } from '../components/controls/Crosshair';
 import { VirtualJoysticks } from '../components/controls/VirtualJoysticks';
 import { ControlsDialog } from '../components/controls/ControlsDialog';
@@ -18,6 +17,7 @@ export function App() {
   const [engine, setEngine] = useState<Engine | null>(null);
   const dialog = useUi((s) => s.dialog);
   const onEngine = useCallback((e: Engine | null) => setEngine(e), []);
+  const credits = useRef<HTMLDivElement>(null);
 
   // Header navigation from the shared shell dispatches actions rather than links.
   useEffect(() => {
@@ -32,14 +32,13 @@ export function App() {
 
   return (
     <EngineContext.Provider value={engine}>
-      <GlobeView onEngine={onEngine} />
+      <GlobeView onEngine={onEngine} creditsRef={credits} />
       <Crosshair />
       <div className="hud">
         <LayerPanel />
         <InspectorPanel />
-        <Toolbar />
         <VirtualJoysticks />
-        <StatusBar />
+        <StatusBar creditsRef={credits} />
       </div>
       {dialog === 'sources' && <SourcesDialog />}
       {dialog === 'controls' && <ControlsDialog />}

@@ -36,6 +36,32 @@ test.describe('globe, data and architecture', () => {
     expect(errors).toEqual([]);
   });
 
+  test('draws borders and place names from OpenFreeMap vector tiles for each zoom', async ({
+    page,
+  }) => {
+    const vectorTiles: string[] = [];
+    page.on('response', (r) => {
+      if (r.ok() && /tiles\.openfreemap\.org\/planet\/[^/]+\/\d+\/\d+\/\d+\.pbf/.test(r.url()))
+        vectorTiles.push(r.url());
+    });
+    await page.goto('/');
+    await waitForEngine(page);
+    const active: string[] = await page.evaluate(() =>
+      (window as any).continuum.engine.imagery.activeProviderIds(),
+    );
+    expect(active).toEqual(
+      expect.arrayContaining(['openfreemap-boundaries', 'openfreemap-places']),
+    );
+    await setView(page, 76.3, 9.95, 90_000); // regional view over Kochi
+    // The regional view draws regional data (zoom 9–14), not a coarse tile magnified.
+    await expect
+      .poll(() => vectorTiles.some((u) => /\/planet\/[^/]+\/(9|1[0-4])\//.test(u)), {
+        timeout: 60_000,
+      })
+      .toBe(true);
+    await expect(page.locator('.credits')).toContainText('OpenStreetMap');
+  });
+
   test('loads USGS earthquakes and NASA EONET events into normalised records', async ({ page }) => {
     await page.goto('/');
     await waitForEngine(page);
