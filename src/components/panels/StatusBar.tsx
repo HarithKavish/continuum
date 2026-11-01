@@ -6,8 +6,11 @@ import {
   useCamera,
   useGamepad,
   useLayers,
+  useSpace,
   useStatus,
 } from '../../core/state/hooks';
+import { body } from '../../spatial/space/bodies';
+import { formatClock, formatDistance } from './SolarSystemSection';
 import { formatAltitude, formatLatLon } from '../../spatial/coordinates/coordinates';
 import { Toolbar } from '../controls/Toolbar';
 
@@ -33,6 +36,15 @@ export function StatusBar({ creditsRef }: { creditsRef: RefObject<HTMLDivElement
   }));
   const pad = useGamepad((s) => ({ pads: s.pads, activeIndex: s.activeIndex, paused: s.paused }));
   const lighting = useLayers((s) => s.lighting);
+  const space = useSpace((s) => ({
+    focus: s.focus,
+    distance: s.distance,
+    live: s.live,
+    time: s.time,
+    speed: s.speed,
+    paused: s.paused,
+  }));
+  const focused = space.focus ? body(space.focus) : null;
   const loading = status.terrain.inFlight + status.terrain.queued > 0 || !status.tilesLoaded;
   const errors = status.terrain.failed + status.imageryErrors;
   const activePad = pad.pads.find((p) => p.index === pad.activeIndex);
@@ -49,8 +61,26 @@ export function StatusBar({ creditsRef }: { creditsRef: RefObject<HTMLDivElement
             : 'Camera height above the WGS84 ellipsoid'
         }
       >
-        {status.engine === 'ready' ? formatAltitude(camera.height) : 'Starting…'}
+        {status.engine !== 'ready'
+          ? 'Starting…'
+          : focused && space.distance !== null
+            ? `${focused.name} · ${formatDistance(Math.max(0, space.distance - Math.max(...focused.radii)))}`
+            : formatAltitude(camera.height)}
       </span>
+      {!space.live && space.time && (
+        <button
+          className="statusbar__item statusbar__button mono"
+          onClick={() => engine?.clockToNow()}
+          title="The clock is not showing now. Select to return to the present, in real time."
+        >
+          {formatClock(space.time)}
+          {space.paused
+            ? ' · paused'
+            : space.speed !== 1
+              ? ` · ×${space.speed.toLocaleString('en')}`
+              : ''}
+        </button>
+      )}
       {camera.pointer && (
         <span
           className="statusbar__item statusbar__item--pointer mono"

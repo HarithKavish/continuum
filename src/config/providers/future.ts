@@ -2,6 +2,21 @@
 
 export const FUTURE_SOURCES: { name: string; reason: string }[] = [
   {
+    name: 'Saturn global map (USGS planetary WMS, by Björn Jónsson)',
+    reason:
+      'Made from Cassini and Voyager images, but no terms of use are stated and the author’s page is gone (HTTP 404, checked 2026-11-01). Saturn is drawn in a plain colour until that is clarified.',
+  },
+  {
+    name: 'Uranus and Neptune “simulated” global mosaics (USGS planetary WMS)',
+    reason:
+      'Painted by James Hastings-Trew “from scratch, based on images found around the internet” (USGS abstract): illustrations, not data. Both are drawn in a plain colour.',
+  },
+  {
+    name: 'Sun texture (USGS planetary WMS)',
+    reason:
+      'A texture by Solar System Scope, not an observation. The Sun is drawn as a featureless disc with limb darkening.',
+  },
+  {
     name: 'ISRO Bhuvan WMS and tile cache (India)',
     reason:
       'Both answer (bhuvan-vec1 WMS, bhuvan-ras2 tile cache) but send no CORS headers (checked 2026-11-01), so a browser on another site cannot read them. OpenStreetMap data covers the same roads, water and places.',
@@ -92,7 +107,8 @@ export const FUTURE_SOURCES: { name: string; reason: string }[] = [
     reason: 'Require an API key or domain registration.',
   },
   {
-    name: 'Moon, Mars and planetary terrain (NASA Trek WMTS)',
-    reason: 'Planned for the beyond-Earth phase; not yet evaluated for browser access.',
+    name: 'Moon, Mars and Mercury close-up tiles and terrain (NASA Trek WMTS)',
+    reason:
+      'Trek’s imagery tiles answer browsers (CORS *, checked 2026-11-01) and go far deeper than the one map per body used now; tiled close-ups and terrain on those bodies are a later step.',
   },
 ];
