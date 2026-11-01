@@ -1,13 +1,13 @@
 # Implementation report — v0.1.0
 
 Acceptance status of Continuum's first version against the original brief, with the
-evidence for each item. Date: 2026-11-01. Branch: `feature/claude` (pull request into
-`development`).
+evidence for each item. Date: 2026-11-01. Released to `main` through #1 → #2 → #3.
 
-**Summary.** The application is built, tested and committed. It renders a real 3D Earth
-from public data in the browser, with no backend, accounts, keys or stored provider data.
-It is **not yet live**: deployment is wired as a committed workflow on `main`, but
-publishing needs owner actions (listed at the end) that no agent credential here may take.
+**Summary.** The application is built, tested and **live at
+https://continuum.harithkavish.com** (since 2026-11-01). It renders a real 3D Earth from
+public data in the browser, with no backend, accounts, keys or stored provider data. It
+reached `main` through #1 → #2 → #3, each passing the automated review, and was published
+by the committed Pages workflow.
 
 ## How it was verified
 
@@ -19,7 +19,14 @@ publishing needs owner actions (listed at the end) that no agent credential here
 | `pnpm test` — 65 unit tests, 5 files | Pass |
 | `pnpm build` | Pass — 14 MB static artifact |
 | `pnpm test:e2e` — 23 browser tests, production build, live providers | Pass (23/23, 5.7 min) |
+| Same suite in GitHub Actions on `runway` before release (run 41283211891) | Pass (23/23, 4.8 min) |
+| Same suite against the live site (`PLAYWRIGHT_BASE_URL=https://continuum.harithkavish.com`) | Pass (23/23)¹ |
 | Browser endpoint probe (`tools/probe-endpoints.mjs`) | All integrated endpoints pass from a third-party origin |
+
+¹ The first live run failed one test: the network allow-list caught the Cloudflare Web
+Analytics beacon, which Cloudflare injects at the edge on every `harithkavish.com` page.
+The beacon is now an expected host, explained in [DEPLOYMENT.md](DEPLOYMENT.md#verifying-a-deployment),
+and that test passes against the live site.
 
 End-to-end tests run the production build in Chromium with a software GPU (SwiftShader)
 against the live providers. A physical gamepad and a hardware GPU were not available in
@@ -102,8 +109,8 @@ this environment; the controller is emulated through `navigator.getGamepads`.
 |---|---|---|
 | Production build succeeds | Pass | `pnpm build` |
 | Repository contains the implementation | Pass | `HarithKavish/continuum`, branch `feature/claude` |
-| Production URL works | **Not done** | Pages not enabled, DNS record not created, work not yet promoted to `main` |
-| HTTPS | **Not done** | Follows from the above |
+| Production URL works | Pass | https://continuum.harithkavish.com serves the `main` build (deploy run 41283827079); e2e against it |
+| HTTPS | Pass | Terminated by Cloudflare's proxy in front of GitHub Pages, as for the sibling sites |
 | No critical console errors | Pass | e2e asserts no page errors on load |
 
 ## Problems found and fixed during verification
@@ -153,23 +160,23 @@ this environment; the controller is emulated through `navigator.getGamepads`.
 - Under a software GPU the globe renders at a few frames per second; real GPUs are needed
   for smooth use. A physical controller has not been tested.
 - Agent commits are unsigned: creating a signing key was not permitted in this session.
+- Cloudflare Web Analytics (zone-wide, injected at the edge) records page views on the
+  live site; it is the owner's hosting setting, not part of the app.
 
-## Outstanding manual actions (owner)
+## Go-live record (2026-11-01)
 
-1. **Repository visibility** — created private; make it public if intended
-   (`gh repo edit HarithKavish/continuum --visibility public --accept-visibility-change-consequences`).
-2. **Automated review** — set the `CLAUDE_CODE_OAUTH_TOKEN` repository secret so
-   `claude-review.yml` runs and the required `gate` check can pass.
-3. **Merge and promote** — review and merge the pull request into `development`, then
-   promote `development` → `runway` → `main` by pull request. `main` publishes.
-4. **Enable GitHub Pages** with the workflow build type and the custom domain
-   `continuum.harithkavish.com` ([DEPLOYMENT.md](DEPLOYMENT.md#one-time-setup-owner-actions)).
-5. **Cloudflare DNS** — add `CNAME continuum → harithkavish.github.io` (proxied), nothing
-   else. The name does not resolve today.
-6. **Social preview** — upload `.github/social-preview.png` in repository settings.
-7. **Ecosystem registry** — a branch `feature/claude-register-continuum` with the registry
-   entry was pushed to `harithkavish-governance`; opening its pull request was not
-   permitted from this session.
-8. **Commit signing** — provision a signing key for agent commits if signatures are to be
+Done:
+- Repository made public, after a full-history secret scan.
+- `CLAUDE_CODE_OAUTH_TOKEN` set from the owner's vault.
+- Pull requests merged: #1 (`feature/claude` → `development`), #2 (→ `runway`) and
+  #3 (→ `main`).
+- GitHub Pages enabled with the workflow build type and the custom domain; its
+  environment limited to `main`.
+- DNS record created by the owner.
+- Ecosystem registry pull request opened: harithkavish-governance #103.
+
+Still open:
+1. **Social preview:** upload `.github/social-preview.png` in repository settings. GitHub
+   has no API for this; the owner deferred it.
+2. **Commit signing:** provision a signing key for agent commits if signatures are to be
    verified.
-9. **After going live** — run `PLAYWRIGHT_BASE_URL=https://continuum.harithkavish.com pnpm test:e2e --workers=1`.
