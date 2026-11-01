@@ -6,6 +6,7 @@ import {
   Cartesian2,
   Cartesian3,
   Cartographic,
+  ClockRange,
   EllipsoidTerrainProvider,
   Ion,
   JulianDate,
@@ -17,6 +18,7 @@ import {
   Transforms,
   Viewer,
   type Entity,
+  type PerspectiveFrustum,
   type TerrainProvider,
 } from 'cesium';
 import { appConfig } from '../../config/application';
@@ -33,6 +35,7 @@ import {
   layersStore,
   selectionStore,
   showToast,
+  spaceStore,
   statusStore,
   uiStore,
 } from '../../core/state/appState';
@@ -47,6 +50,11 @@ import { GamepadManager, gamepadStore } from '../../gamepad/GamepadManager';
 import { shapeInput, type ButtonAction } from '../../gamepad/GamepadMapping';
 import { KeyboardInput, virtualSticks } from '../../gamepad/KeyboardInput';
 import { ImageryManager } from '../imagery/ImageryManager';
+import { BODIES, type BodyId } from '../space/bodies';
+import { CLOCK_RANGE, CLOCK_SPEEDS } from '../space/clock';
+import { SolarSystem } from '../space/SolarSystem';
+import { SpaceCamera } from '../space/SpaceCamera';
+import { SpacePointer } from '../space/SpacePointer';
 import { TerrariumTerrainProvider } from '../terrain/TerrariumTerrainProvider';
 import { TerrariumTileSource } from '../terrain/TerrariumTileSource';
 import { BuildingsLayer } from './BuildingsLayer';
@@ -55,7 +63,20 @@ import { FeedLayers } from './FeedLayers';
 import { MeasureLayer } from './MeasureLayer';
 
 export type EngineAction =
-  ButtonAction | 'select' | 'back' | 'recenter' | 'togglePanel' | 'toggleLighting';
+  | ButtonAction
+  | 'select'
+  | 'back'
+  | 'recenter'
+  | 'togglePanel'
+  | 'toggleLighting'
+  | 'prevBody'
+  | 'nextBody';
+
+/**
+ * Orbiting Earth closer than this (about 7 600 km up) hands navigation back to the
+ * Earth-fixed controls; above it Earth turns beneath the camera at its real rate.
+ */
+const EARTH_HANDBACK_DISTANCE = 2.2 * 6_378_137;
 
 export class Engine {
   readonly viewer: Viewer;
@@ -67,7 +88,13 @@ export class Engine {
   readonly buildings: BuildingsLayer;
   readonly controls: CameraControls;
   readonly gamepad: GamepadManager;
+  readonly solarSystem: SolarSystem;
+  readonly space: SpaceCamera;
   private readonly keyboard: KeyboardInput;
+  private readonly spacePointer: SpacePointer;
+  private lastSpaceTick = performance.now();
+  private lastSpacePublish = 0;
+  private lastOrientationCheck = 0;
   private readonly unsubscribers: (() => void)[] = [];
   private frameHandle = 0;
   /** Count of input frames processed; lets tests wait until input has been sampled. */
@@ -151,6 +178,26 @@ export class Engine {
     this.gamepad = new GamepadManager();
     this.keyboard = new KeyboardInput(window, (a) => this.action(a));
 
+    // The rest of the solar system, and navigation among it. The far plane reaches past
+    // Pluto from anywhere; Cesium's logarithmic depth keeps near detail sharp.
+    (scene.camera.frustum as PerspectiveFrustum).far = 1e14;
+    const clock = this.viewer.clock;
+    clock.startTime = JulianDate.fromIso8601(CLOCK_RANGE.start);
+    clock.stopTime = JulianDate.fromIso8601(CLOCK_RANGE.stop);
+    clock.clockRange = ClockRange.CLAMPED;
+    this.solarSystem = new SolarSystem(scene);
+    this.space = new SpaceCamera(scene, this.solarSystem);
+    this.space.onModeChange = (space) => this.onSpaceMode(space);
+    this.spacePointer = new SpacePointer(
+      scene.canvas,
+      this.space,
+      () => this.atEarthLimit(),
+      () => scene.requestRender(),
+    );
+    scene.preUpdate.addEventListener((_scene, time) => this.spaceTick(time));
+    this.unsubscribers.push(spaceStore.subscribe(() => this.applySpaceOptions()));
+    this.applySpaceOptions();
+
     this.applyRenderSettings();
     this.applyLayers();
     this.unsubscribers.push(layersStore.subscribe(() => this.applyLayers()));
@@ -230,8 +277,11 @@ export class Engine {
         const modifier = this.gamepad.isHeld(pad, 'modifier', gs.profile);
         for (const action of edges) {
           if (action === 'pause') continue;
-          if (modifier && (action === 'fineLeft' || action === 'fineRight'))
-            this.cycleBaseLayer(action === 'fineRight' ? 1 : -1);
+          const sideways = action === 'fineLeft' || action === 'fineRight';
+          if (modifier && sideways) this.cycleBaseLayer(action === 'fineRight' ? 1 : -1);
+          // In space the D-pad's left and right step through the bodies.
+          else if (sideways && this.space.active)
+            this.action(action === 'fineRight' ? 'nextBody' : 'prevBody');
           else this.action(action);
         }
         const shaped = shapeInput(pad, gs.profile);
@@ -239,8 +289,10 @@ export class Engine {
         if (!modifier) {
           if (this.gamepad.isHeld(pad, 'fineUp', gs.profile)) fine.panY += 0.25;
           if (this.gamepad.isHeld(pad, 'fineDown', gs.profile)) fine.panY -= 0.25;
-          if (this.gamepad.isHeld(pad, 'fineLeft', gs.profile)) fine.panX -= 0.25;
-          if (this.gamepad.isHeld(pad, 'fineRight', gs.profile)) fine.panX += 0.25;
+          if (!this.space.active) {
+            if (this.gamepad.isHeld(pad, 'fineLeft', gs.profile)) fine.panX -= 0.25;
+            if (this.gamepad.isHeld(pad, 'fineRight', gs.profile)) fine.panX += 0.25;
+          }
         }
         intents.push(shaped, fine);
       }
@@ -248,7 +300,15 @@ export class Engine {
 
     const intent = addIntents(...intents);
     const active = Object.values(intent).some((v) => v !== 0);
-    if (active || this.controls.moving) {
+    if (this.space.active) {
+      if (active) {
+        this.space.input(dt, intent);
+        this.viewer.scene.requestRender();
+      }
+    } else if (intent.zoom < 0 && this.atEarthLimit()) {
+      // Zooming out past the highest Earth view continues into space.
+      this.space.enterAroundEarth();
+    } else if (active || this.controls.moving) {
       this.controls.update(dt, intent);
       this.viewer.scene.requestRender();
     }
@@ -370,6 +430,7 @@ export class Engine {
    */
   private applyLighting(realistic: boolean): void {
     const globe = this.viewer.scene.globe;
+    this.solarSystem.setRealistic(realistic);
     if (globe.enableLighting === realistic && this.buildings.realisticLighting === realistic)
       return;
     globe.enableLighting = realistic;
@@ -401,6 +462,136 @@ export class Engine {
     showToast(`Imagery: ${next.label}`);
   }
 
+  // ---------------------------------------------------------------- space
+
+  /**
+   * Every Cesium tick, before the camera is checked for changes: place the bodies for the
+   * clock's time, then the camera that follows them, then their points, labels and maps.
+   */
+  private spaceTick(time: JulianDate): void {
+    const now = performance.now();
+    const dt = Math.min(0.25, (now - this.lastSpaceTick) / 1000);
+    this.lastSpaceTick = now;
+    this.solarSystem.update(time);
+    // In real time the bodies barely move: follow them twice a second. Faster, every frame.
+    const clock = this.viewer.clock;
+    this.space.update(dt, !clock.shouldAnimate ? Infinity : clock.multiplier > 1 ? 0 : 0.5);
+    if (
+      this.space.focus === 'earth' &&
+      !this.space.flying &&
+      this.space.orbit.distance < EARTH_HANDBACK_DISTANCE
+    )
+      this.space.leave();
+    this.solarSystem.decorate(this.space.focus);
+    if (now - this.lastOrientationCheck > 2000) {
+      this.lastOrientationCheck = now;
+      // The precise rotation needs the IAU 2006 table for the clock's date; load it when
+      // the clock has moved to a date not yet loaded (Cesium uses an approximation meanwhile).
+      if (!Transforms.computeIcrfToFixedMatrix(time)) this.loadEarthOrientation(time);
+    }
+    if (now - this.lastSpacePublish > 250) {
+      this.lastSpacePublish = now;
+      this.publishSpace(time);
+    }
+  }
+
+  private publishSpace(time: JulianDate): void {
+    const clock = this.viewer.clock;
+    const focus = this.space.focus;
+    const live =
+      clock.shouldAnimate &&
+      clock.multiplier === 1 &&
+      Math.abs(JulianDate.secondsDifference(time, JulianDate.now())) < 60;
+    spaceStore.set({
+      focus,
+      flying: this.space.flying,
+      speed: clock.multiplier,
+      paused: !clock.shouldAnimate,
+      time: JulianDate.toIso8601(time, 0),
+      live,
+      distance: focus
+        ? Cartesian3.distance(this.viewer.camera.positionWC, this.solarSystem.view(focus).position)
+        : null,
+      fromEarth: focus && focus !== 'earth' ? this.solarSystem.distance('earth', focus) : null,
+    });
+  }
+
+  private onSpaceMode(space: boolean): void {
+    // Cesium's mouse and touch controller works in Earth-fixed axes; in space SpacePointer
+    // takes over.
+    this.viewer.scene.screenSpaceCameraController.enableInputs = !space;
+    this.applySpaceOptions();
+    this.publishSpace(this.viewer.clock.currentTime);
+    this.viewer.scene.requestRender();
+  }
+
+  private applySpaceOptions(): void {
+    const { orbits, labels } = spaceStore.get();
+    this.solarSystem.setOverlays({ orbits, labels, active: this.space.active });
+    savePreferences({ space: { orbits, labels } });
+    this.viewer.scene.requestRender();
+  }
+
+  /** Whether the Earth view is as high as it goes. */
+  private atEarthLimit(): boolean {
+    return (
+      this.viewer.camera.positionCartographic.height >=
+      0.97 * appConfig.navigation.maxCameraHeightMeters
+    );
+  }
+
+  /** Fly to a body; from Earth this switches to space navigation. */
+  flyToBody(id: BodyId): void {
+    this.space.flyTo(id);
+    this.publishSpace(this.viewer.clock.currentTime);
+  }
+
+  /** Fly back to Earth and return to the Earth-fixed controls. */
+  returnToEarth(): void {
+    if (this.space.active) this.space.returnToEarth();
+  }
+
+  private stepBody(direction: number): void {
+    const ids = BODIES.map((b) => b.id);
+    const index = ids.indexOf(this.space.focus ?? 'earth');
+    const next = ids[(index + direction + ids.length) % ids.length]!;
+    this.flyToBody(next);
+    showToast(`Flying to ${BODIES.find((b) => b.id === next)!.name}`);
+  }
+
+  /** Run the clock at `speed` simulated seconds per real second. */
+  setClockSpeed(speed: number): void {
+    const clock = this.viewer.clock;
+    clock.multiplier = speed;
+    clock.shouldAnimate = true;
+    this.publishSpace(clock.currentTime);
+  }
+
+  private stepClockSpeed(direction: number): void {
+    const index = CLOCK_SPEEDS.indexOf(this.viewer.clock.multiplier);
+    const next =
+      CLOCK_SPEEDS[Math.min(CLOCK_SPEEDS.length - 1, Math.max(0, index + direction))] ?? 1;
+    this.setClockSpeed(next);
+    showToast(next === 1 ? 'Time: real time' : `Time: ×${next.toLocaleString('en')}`);
+  }
+
+  toggleClockPaused(): void {
+    const clock = this.viewer.clock;
+    clock.shouldAnimate = !clock.shouldAnimate;
+    this.publishSpace(clock.currentTime);
+  }
+
+  /** Back to the present moment, in real time. */
+  clockToNow(): void {
+    const clock = this.viewer.clock;
+    clock.currentTime = JulianDate.now();
+    clock.multiplier = 1;
+    clock.shouldAnimate = true;
+    this.loadEarthOrientation(clock.currentTime);
+    this.publishSpace(clock.currentTime);
+    this.viewer.scene.requestRender();
+  }
+
   // ---------------------------------------------------------------- actions
 
   action(action: EngineAction): void {
@@ -412,7 +603,12 @@ export class Engine {
         this.back();
         break;
       case 'recenter':
-        this.recenter();
+        if (this.space.active) this.space.returnToEarth();
+        else this.recenter();
+        break;
+      case 'prevBody':
+      case 'nextBody':
+        this.stepBody(action === 'nextBody' ? 1 : -1);
         break;
       case 'togglePanel':
         uiStore.set((s) => ({ rightOpen: !s.rightOpen }));
@@ -425,6 +621,11 @@ export class Engine {
       }
       case 'slower':
       case 'faster': {
+        // In space the bumpers change how fast time runs.
+        if (this.space.active) {
+          this.stepClockSpeed(action === 'faster' ? 1 : -1);
+          break;
+        }
         const speed = this.controls.changeSpeed(action === 'faster' ? 1 : -1);
         showToast(`Navigation speed ×${speed}`);
         statusStore.set({ navSpeed: speed });
@@ -548,6 +749,7 @@ export class Engine {
   }
 
   private handleClick(position: Cartesian2): void {
+    if (this.space.active) return; // nothing to inspect off Earth yet
     const { tool } = selectionStore.get();
     if (tool === 'inspect') {
       const picked = this.viewer.scene.pick(position) as { id?: Entity | string } | undefined;
@@ -589,6 +791,7 @@ export class Engine {
     cancelAnimationFrame(this.frameHandle);
     this.unsubscribers.forEach((u) => u());
     this.keyboard.dispose();
+    this.spacePointer.dispose();
     this.gamepad.dispose();
     this.feeds.destroy();
     this.buildings.destroy();

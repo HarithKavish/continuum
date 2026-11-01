@@ -4,6 +4,7 @@ import {
   feedsStore,
   layersStore,
   selectionStore,
+  spaceStore,
   statusStore,
   uiStore,
 } from './appState';
@@ -24,5 +25,16 @@ export const useSelection = <T>(select: (s: State<typeof selectionStore>) => T) 
 export const useUi = <T>(select: (s: State<typeof uiStore>) => T) => useStore(uiStore, select);
 export const useGamepad = <T>(select: (s: State<typeof gamepadStore>) => T) =>
   useStore(gamepadStore, select);
+export const useSpace = <T>(select: (s: State<typeof spaceStore>) => T) =>
+  useStore(spaceStore, select);
 
-export { cameraStore, feedsStore, gamepadStore, layersStore, selectionStore, statusStore, uiStore };
+export {
+  cameraStore,
+  feedsStore,
+  gamepadStore,
+  layersStore,
+  selectionStore,
+  spaceStore,
+  statusStore,
+  uiStore,
+};

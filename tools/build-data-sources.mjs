@@ -17,7 +17,7 @@ lines.push('| Provider | Category | Coverage | Resolution | Auth | CORS | Licenc
 lines.push('|---|---|---|---|---|---|---|---|');
 for (const p of PROVIDERS) {
   lines.push(
-    `| [${cell(p.name)}](#${p.id}) | ${p.category} | ${p.coverage.extent} | ${cell(p.resolution.split('.')[0])} | ${p.authentication} | ${p.cors.verified ? `verified ${p.cors.verifiedOn}` : 'no'} | ${cell(p.licence.name)} | ${p.status} |`,
+    `| [${cell(p.name)}](#${p.id}) | ${p.category} | ${p.coverage.extent} | ${cell(p.resolution.split('.')[0])} | ${p.authentication} | ${p.endpoint.protocol === 'bundled' ? 'compiled in' : p.cors.verified ? `verified ${p.cors.verifiedOn}` : 'no'} | ${cell(p.licence.name)} | ${p.status} |`,
   );
 }
 lines.push('');
@@ -34,9 +34,11 @@ for (const p of PROVIDERS) {
     ['Authentication', 'None'],
     [
       'CORS (browser)',
-      p.cors.verified
-        ? `Verified ${p.cors.verifiedOn}; Access-Control-Allow-Origin: ${p.cors.allowOrigin}`
-        : 'Not verified',
+      p.endpoint.protocol === 'bundled'
+        ? 'Not fetched: published values compiled into the app'
+        : p.cors.verified
+          ? `Verified ${p.cors.verifiedOn}; Access-Control-Allow-Origin: ${p.cors.allowOrigin}`
+          : 'Not verified',
     ],
     ['Coverage', p.coverage.description],
     ['Resolution', p.resolution],

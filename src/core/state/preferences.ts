@@ -11,6 +11,8 @@ export interface Preferences {
   knownOverlays?: string[];
   /** Realistic day and night (true) or full daylight. */
   lighting?: boolean;
+  /** Orbit lines and body names in space. */
+  space?: { orbits?: boolean; labels?: boolean };
   lowPower?: boolean;
   controls?: unknown;
 }

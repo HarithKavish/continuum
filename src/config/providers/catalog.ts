@@ -1191,6 +1191,230 @@ export const PROVIDERS: ProviderMetadata[] = [
     ],
     status: 'integrated',
   },
+  {
+    id: 'usgs-planetary-maps',
+    name: 'Planetary maps (USGS Astrogeology)',
+    organisation:
+      'USGS Astrogeology Science Center, serving NASA mission mosaics (MESSENGER, Magellan, LRO, Viking, Cassini, New Horizons)',
+    category: 'planetary',
+    capabilities: ['planetary-map'],
+    dataset:
+      'Simple-cylindrical WMS layers: Mercury MESSENGER, Venus MAGELLAN_color, Moon LROC_WAC, Mars MDIM21_color, Jupiter CASSINI, Pluto NEWHORIZONS_PLUTO_MOSAIC',
+    description:
+      'One global map per body, wrapped round its sphere in space: grey MESSENGER Mercury, Magellan radar of Venus’s surface, the LRO wide-angle Moon, colourised Viking Mars, Cassini’s Jupiter and the New Horizons Pluto mosaic.',
+    documentationUrl: 'https://planetarymaps.usgs.gov/',
+    homepageUrl: 'https://astrogeology.usgs.gov/',
+    endpoint: {
+      url: 'https://planetarymaps.usgs.gov/cgi-bin/mapserv?map=/maps/<body>/<body>_simp_cyl.map',
+      protocol: 'wms',
+      format: 'WMS 1.1.1 GetMap, EPSG:4326 (planetocentric, east-positive), JPEG',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'global',
+      description:
+        'Whole bodies. Pluto’s mosaic is detailed only on the hemisphere New Horizons passed; the rest is coarse or blank.',
+    },
+    resolution:
+      'Requested at 2 048 × 1 024 pixels per body (the Moon and Mars at 4 096 × 2 048 when close): about 5.3 km per pixel at the Moon’s equator and 2.6 km close up. The source mosaics are far finer (e.g. 100–232 m for Mars).',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: {
+      kind: 'static',
+      description:
+        'Mission mosaics: Mercury 2016, Moon 2013, Pluto 2017, Viking 1970s, Cassini 2000.',
+    },
+    licence: {
+      name: 'Public domain (U.S. Government and NASA mission data)',
+      url: 'https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits',
+      notes: 'Credit the missions and USGS.',
+    },
+    attribution: {
+      short: 'Planetary maps: NASA, USGS Astrogeology',
+      full: 'Planetary maps from NASA missions (MESSENGER, Magellan, LRO, Viking, Cassini, New Horizons) via the USGS Astrogeology planetary WMS.',
+    },
+    rateLimits: 'None published.',
+    caching: 'No Cache-Control; each map is fetched once per session and held in memory.',
+    limitations: [
+      'Venus is shown by its radar-mapped surface; in visible light its clouds hide it.',
+      'Mars’s colours are added to the Viking mosaic (NASA Ames), not measured.',
+      'One texture per body: close up the detail is that of the texture, not of the source mosaic.',
+      'No map is shown for Saturn, Uranus and Neptune (see Investigated, not integrated), nor for the Sun.',
+    ],
+    status: 'integrated',
+  },
+  {
+    id: 'jpl-approximate-positions',
+    name: 'Planet positions (JPL approximate elements)',
+    organisation: 'NASA JPL Solar System Dynamics (E. M. Standish and J. G. Williams)',
+    category: 'planetary',
+    capabilities: ['ephemeris'],
+    dataset:
+      'Keplerian elements and rates, mean ecliptic and equinox of J2000: Table 1 (1800–2050), Tables 2a and 2b (3000 BC – AD 3000)',
+    description:
+      'Where Mercury to Neptune and the Earth–Moon barycentre are at any time, solved exactly as JPL describes, and the orbit lines they trace.',
+    documentationUrl: 'https://ssd.jpl.nasa.gov/planets/approx_pos.html',
+    homepageUrl: 'https://ssd.jpl.nasa.gov/',
+    endpoint: {
+      url: 'https://ssd.jpl.nasa.gov/planets/approx_pos.html',
+      protocol: 'bundled',
+      format: 'Published tables, compiled into the app',
+    },
+    authentication: 'none',
+    cors: { verified: false, verifiedOn: VERIFIED, allowOrigin: 'not fetched' },
+    coverage: { extent: 'global', description: 'Mercury to Neptune, 3000 BC – AD 3000.' },
+    resolution: 'Analytical: positions at any instant.',
+    accuracy: {
+      horizontal:
+        'JPL’s nominal heliocentric errors for 1800–2050: 10–600″ in longitude (Neptune smallest, Saturn largest), 1–25″ in latitude, 1 000–1 500 000 km in distance. Measured against JPL Horizons at four dates: within twice those, except Neptune at up to 45″ (its elements follow the barycentre); see docs/ACCURACY.md.',
+      vertical: null,
+      reference: 'ICRF (J2000 equatorial), via the J2000 ecliptic at obliquity 23.43928°',
+    },
+    verticalDatum: null,
+    temporal: { kind: 'static', description: 'Fixed tables, evaluated for the clock’s time.' },
+    licence: {
+      name: 'NASA/JPL published data (no use restrictions stated)',
+      url: 'https://ssd.jpl.nasa.gov/planets/approx_pos.html',
+    },
+    attribution: {
+      short: 'Positions: NASA JPL',
+      full: 'Planet positions from JPL’s “Approximate Positions of the Planets” (E. M. Standish and J. G. Williams).',
+    },
+    rateLimits: 'Not applicable: nothing is fetched.',
+    caching: 'Not applicable.',
+    limitations: [
+      'Geometric positions at the clock’s time, not corrected for light travel time.',
+      'Pluto is not in these tables: see the Pluto elements entry.',
+    ],
+    status: 'integrated',
+  },
+  {
+    id: 'jpl-horizons-pluto',
+    name: 'Pluto orbital elements (JPL Horizons)',
+    organisation: 'NASA JPL Solar System Dynamics',
+    category: 'planetary',
+    capabilities: ['ephemeris'],
+    dataset:
+      'Osculating heliocentric elements, ecliptic and equinox of J2000, at 2026-11-01 00:00 TDB',
+    description: 'Pluto’s orbit, propagated as a two-body ellipse from one set of elements.',
+    documentationUrl: 'https://ssd.jpl.nasa.gov/horizons/manual.html',
+    homepageUrl: 'https://ssd.jpl.nasa.gov/horizons/',
+    endpoint: {
+      url: 'https://ssd.jpl.nasa.gov/api/horizons.api (EPHEM_TYPE=ELEMENTS, COMMAND=999)',
+      protocol: 'bundled',
+      format: 'Values compiled into the app',
+    },
+    authentication: 'none',
+    cors: { verified: false, verifiedOn: VERIFIED, allowOrigin: 'not fetched' },
+    coverage: { extent: 'global', description: 'Pluto.' },
+    resolution: 'Analytical.',
+    accuracy: {
+      horizontal:
+        'Measured against Horizons: exact at the element epoch, within 0.15° from 2000 to 2040, 4.6° in 1850.',
+      vertical: null,
+      reference: 'ICRF',
+    },
+    verticalDatum: null,
+    temporal: { kind: 'static', description: 'One epoch; accuracy falls away from it.' },
+    licence: {
+      name: 'NASA/JPL published data (no use restrictions stated)',
+      url: 'https://ssd.jpl.nasa.gov/horizons/',
+    },
+    attribution: { short: 'Pluto: JPL Horizons', full: 'Pluto’s elements from JPL Horizons.' },
+    rateLimits: 'Not applicable: nothing is fetched.',
+    caching: 'Not applicable.',
+    limitations: ['A two-body orbit ignores Neptune’s pull, so it drifts over decades.'],
+    status: 'integrated',
+  },
+  {
+    id: 'naif-pck00011',
+    name: 'Body sizes and rotation (IAU 2015, NAIF pck00011)',
+    organisation:
+      'IAU Working Group on Cartographic Coordinates and Rotational Elements; NASA NAIF',
+    category: 'planetary',
+    capabilities: ['ephemeris'],
+    dataset: 'pck00011.tpc: pole, prime meridian and radii of the Sun and planets',
+    description:
+      'Which way each body points and how fast it turns, and its size: so the right face of Mars or Jupiter faces Earth at the clock’s time.',
+    documentationUrl: 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc',
+    homepageUrl: 'https://naif.jpl.nasa.gov/',
+    endpoint: {
+      url: 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc',
+      protocol: 'bundled',
+      format: 'SPICE text kernel, values compiled into the app',
+    },
+    authentication: 'none',
+    cors: { verified: false, verifiedOn: VERIFIED, allowOrigin: 'not fetched' },
+    coverage: { extent: 'global', description: 'The Sun, Mercury to Neptune, and Pluto.' },
+    resolution: 'Analytical.',
+    accuracy: {
+      horizontal:
+        'Sub-Earth points measured against JPL Horizons for all eight bodies: within 0.2° in longitude and latitude.',
+      vertical: null,
+      reference: 'ICRF; planetocentric, east-positive longitudes',
+    },
+    verticalDatum: null,
+    temporal: { kind: 'static', description: 'IAU 2015 models (Archinal et al. 2018).' },
+    licence: {
+      name: 'NASA NAIF / IAU published constants (no use restrictions stated)',
+      url: 'https://naif.jpl.nasa.gov/naif/rules.html',
+    },
+    attribution: {
+      short: 'Rotation: IAU WGCCRE 2015 (NAIF)',
+      full: 'Body orientations and radii from the IAU WGCCRE 2015 report, as published by NASA NAIF in pck00011.tpc.',
+    },
+    rateLimits: 'Not applicable: nothing is fetched.',
+    caching: 'Not applicable.',
+    limitations: [
+      'Jupiter’s periodic pole terms (≤ 0.0022°) and Mercury’s libration (≤ 0.011°) are left out.',
+      'Jupiter, Saturn, Uranus and Neptune turn at their System III (magnetic) rates; their clouds drift against them.',
+    ],
+    status: 'integrated',
+  },
+  {
+    id: 'nasa-saturn-rings',
+    name: 'Saturn’s rings (NASA fact sheet)',
+    organisation: 'NASA Goddard Space Flight Center, NSSDCA',
+    category: 'planetary',
+    capabilities: ['ephemeris'],
+    dataset:
+      'Saturnian Rings Fact Sheet: radii, optical depth and albedo of the C, B, A and F rings',
+    description: 'Saturn’s main rings, drawn to their published radii, opacity and brightness.',
+    documentationUrl: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html',
+    homepageUrl: 'https://nssdc.gsfc.nasa.gov/',
+    endpoint: {
+      url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html',
+      protocol: 'bundled',
+      format: 'Values compiled into the app',
+    },
+    authentication: 'none',
+    cors: { verified: false, verifiedOn: VERIFIED, allowOrigin: 'not fetched' },
+    coverage: {
+      extent: 'global',
+      description: 'C, B and A rings, the Cassini Division and the F ring.',
+    },
+    resolution: 'Ring boundaries to the kilometre.',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: { kind: 'static', description: 'Last updated by NASA on 19 April 2022.' },
+    licence: {
+      name: 'NASA public information',
+      url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html',
+    },
+    attribution: {
+      short: 'Saturn’s rings: NASA',
+      full: 'Ring radii, optical depths and albedos from NASA’s Saturnian Rings Fact Sheet.',
+    },
+    rateLimits: 'Not applicable: nothing is fetched.',
+    caching: 'Not applicable.',
+    limitations: [
+      'Opacity and brightness use the middle of each published range; ring colour is a display choice.',
+      'The F ring is listed by its inner edge only (narrower than 1 000 km); it is drawn 500 km wide.',
+      'Gaps narrower than 1 000 km and the shadows of the rings and planet are not drawn.',
+    ],
+    status: 'integrated',
+  },
 ];
 
 export function providerById(id: string): ProviderMetadata {

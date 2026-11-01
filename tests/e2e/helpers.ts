@@ -31,6 +31,7 @@ export const ALLOWED_HOSTS = new Set([
   'service.pdok.nl',
   'wmts.geo.admin.ch',
   'mapsneu.wien.gv.at',
+  'planetarymaps.usgs.gov',
   // Not the app: Cloudflare injects its Web Analytics beacon into every harithkavish.com
   // page at the edge (a zone-wide setting), so it appears only on the deployed site.
   'static.cloudflareinsights.com',

@@ -80,6 +80,11 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | [NOAA NCEI DEM global mosaic](#noaa-ncei-dem) | bathymetry | global | Varies by contributing DEM; the service reports its catalogue item but not a resolution per point | none | verified 2026-11-01 | Public domain (U.S. Government work) | integrated |
 | [Current weather (Open-Meteo)](#open-meteo-weather) | weather | global | Model grid: ~1–11 km depending on region and model | none | verified 2026-11-01 | Open-Meteo free API: non-commercial use; data CC BY 4.0 | integrated |
 | [Nominatim place search](#osm-nominatim) | geocoding | global | Place centroids and bounding boxes | none | verified 2026-11-01 | ODbL 1.0 | integrated |
+| [Planetary maps (USGS Astrogeology)](#usgs-planetary-maps) | planetary | global | Requested at 2 048 × 1 024 pixels per body (the Moon and Mars at 4 096 × 2 048 when close): about 5 | none | verified 2026-11-01 | Public domain (U.S. Government and NASA mission data) | integrated |
+| [Planet positions (JPL approximate elements)](#jpl-approximate-positions) | planetary | global | Analytical: positions at any instant | none | compiled in | NASA/JPL published data (no use restrictions stated) | integrated |
+| [Pluto orbital elements (JPL Horizons)](#jpl-horizons-pluto) | planetary | global | Analytical | none | compiled in | NASA/JPL published data (no use restrictions stated) | integrated |
+| [Body sizes and rotation (IAU 2015, NAIF pck00011)](#naif-pck00011) | planetary | global | Analytical | none | compiled in | NASA NAIF / IAU published constants (no use restrictions stated) | integrated |
+| [Saturn’s rings (NASA fact sheet)](#nasa-saturn-rings) | planetary | global | Ring boundaries to the kilometre | none | compiled in | NASA public information | integrated |
 
 ### Terrain Tiles (Terrarium)
 
@@ -980,10 +985,158 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | Limitations | Searches run only on explicit submit (no as-you-type), at most one per second, per the OSMF usage policy. Can be switched off in configuration without a code change if OSMF asks. |
 | Status | integrated |
 
+### Planetary maps (USGS Astrogeology)
+
+<a id="usgs-planetary-maps"></a>
+
+| | |
+|---|---|
+| Provider | USGS Astrogeology Science Center, serving NASA mission mosaics (MESSENGER, Magellan, LRO, Viking, Cassini, New Horizons) |
+| Dataset | Simple-cylindrical WMS layers: Mercury MESSENGER, Venus MAGELLAN_color, Moon LROC_WAC, Mars MDIM21_color, Jupiter CASSINI, Pluto NEWHORIZONS_PLUTO_MOSAIC |
+| Description | One global map per body, wrapped round its sphere in space: grey MESSENGER Mercury, Magellan radar of Venus’s surface, the LRO wide-angle Moon, colourised Viking Mars, Cassini’s Jupiter and the New Horizons Pluto mosaic. |
+| Documentation | https://planetarymaps.usgs.gov/ |
+| Endpoint | `https://planetarymaps.usgs.gov/cgi-bin/mapserv?map=/maps/<body>/<body>_simp_cyl.map` (wms; WMS 1.1.1 GetMap, EPSG:4326 (planetocentric, east-positive), JPEG) |
+| Capabilities | planetary-map |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | Whole bodies. Pluto’s mosaic is detailed only on the hemisphere New Horizons passed; the rest is coarse or blank. |
+| Resolution | Requested at 2 048 × 1 024 pixels per body (the Moon and Mars at 4 096 × 2 048 when close): about 5.3 km per pixel at the Moon’s equator and 2.6 km close up. The source mosaics are far finer (e.g. 100–232 m for Mars). |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | static: Mission mosaics: Mercury 2016, Moon 2013, Pluto 2017, Viking 1970s, Cassini 2000. |
+| Rate limits | None published. |
+| Caching | No Cache-Control; each map is fetched once per session and held in memory. |
+| Licence | [Public domain (U.S. Government and NASA mission data)](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits) — Credit the missions and USGS. |
+| Attribution | Planetary maps from NASA missions (MESSENGER, Magellan, LRO, Viking, Cassini, New Horizons) via the USGS Astrogeology planetary WMS. |
+| Limitations | Venus is shown by its radar-mapped surface; in visible light its clouds hide it. Mars’s colours are added to the Viking mosaic (NASA Ames), not measured. One texture per body: close up the detail is that of the texture, not of the source mosaic. No map is shown for Saturn, Uranus and Neptune (see Investigated, not integrated), nor for the Sun. |
+| Status | integrated |
+
+### Planet positions (JPL approximate elements)
+
+<a id="jpl-approximate-positions"></a>
+
+| | |
+|---|---|
+| Provider | NASA JPL Solar System Dynamics (E. M. Standish and J. G. Williams) |
+| Dataset | Keplerian elements and rates, mean ecliptic and equinox of J2000: Table 1 (1800–2050), Tables 2a and 2b (3000 BC – AD 3000) |
+| Description | Where Mercury to Neptune and the Earth–Moon barycentre are at any time, solved exactly as JPL describes, and the orbit lines they trace. |
+| Documentation | https://ssd.jpl.nasa.gov/planets/approx_pos.html |
+| Endpoint | `https://ssd.jpl.nasa.gov/planets/approx_pos.html` (bundled; Published tables, compiled into the app) |
+| Capabilities | ephemeris |
+| Authentication | None |
+| CORS (browser) | Not fetched: published values compiled into the app |
+| Coverage | Mercury to Neptune, 3000 BC – AD 3000. |
+| Resolution | Analytical: positions at any instant. |
+| Horizontal accuracy | JPL’s nominal heliocentric errors for 1800–2050: 10–600″ in longitude (Neptune smallest, Saturn largest), 1–25″ in latitude, 1 000–1 500 000 km in distance. Measured against JPL Horizons at four dates: within twice those, except Neptune at up to 45″ (its elements follow the barycentre); see docs/ACCURACY.md. |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | ICRF (J2000 equatorial), via the J2000 ecliptic at obliquity 23.43928° |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | static: Fixed tables, evaluated for the clock’s time. |
+| Rate limits | Not applicable: nothing is fetched. |
+| Caching | Not applicable. |
+| Licence | [NASA/JPL published data (no use restrictions stated)](https://ssd.jpl.nasa.gov/planets/approx_pos.html) |
+| Attribution | Planet positions from JPL’s “Approximate Positions of the Planets” (E. M. Standish and J. G. Williams). |
+| Limitations | Geometric positions at the clock’s time, not corrected for light travel time. Pluto is not in these tables: see the Pluto elements entry. |
+| Status | integrated |
+
+### Pluto orbital elements (JPL Horizons)
+
+<a id="jpl-horizons-pluto"></a>
+
+| | |
+|---|---|
+| Provider | NASA JPL Solar System Dynamics |
+| Dataset | Osculating heliocentric elements, ecliptic and equinox of J2000, at 2026-11-01 00:00 TDB |
+| Description | Pluto’s orbit, propagated as a two-body ellipse from one set of elements. |
+| Documentation | https://ssd.jpl.nasa.gov/horizons/manual.html |
+| Endpoint | `https://ssd.jpl.nasa.gov/api/horizons.api (EPHEM_TYPE=ELEMENTS, COMMAND=999)` (bundled; Values compiled into the app) |
+| Capabilities | ephemeris |
+| Authentication | None |
+| CORS (browser) | Not fetched: published values compiled into the app |
+| Coverage | Pluto. |
+| Resolution | Analytical. |
+| Horizontal accuracy | Measured against Horizons: exact at the element epoch, within 0.15° from 2000 to 2040, 4.6° in 1850. |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | ICRF |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | static: One epoch; accuracy falls away from it. |
+| Rate limits | Not applicable: nothing is fetched. |
+| Caching | Not applicable. |
+| Licence | [NASA/JPL published data (no use restrictions stated)](https://ssd.jpl.nasa.gov/horizons/) |
+| Attribution | Pluto’s elements from JPL Horizons. |
+| Limitations | A two-body orbit ignores Neptune’s pull, so it drifts over decades. |
+| Status | integrated |
+
+### Body sizes and rotation (IAU 2015, NAIF pck00011)
+
+<a id="naif-pck00011"></a>
+
+| | |
+|---|---|
+| Provider | IAU Working Group on Cartographic Coordinates and Rotational Elements; NASA NAIF |
+| Dataset | pck00011.tpc: pole, prime meridian and radii of the Sun and planets |
+| Description | Which way each body points and how fast it turns, and its size: so the right face of Mars or Jupiter faces Earth at the clock’s time. |
+| Documentation | https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc |
+| Endpoint | `https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc` (bundled; SPICE text kernel, values compiled into the app) |
+| Capabilities | ephemeris |
+| Authentication | None |
+| CORS (browser) | Not fetched: published values compiled into the app |
+| Coverage | The Sun, Mercury to Neptune, and Pluto. |
+| Resolution | Analytical. |
+| Horizontal accuracy | Sub-Earth points measured against JPL Horizons for all eight bodies: within 0.2° in longitude and latitude. |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | ICRF; planetocentric, east-positive longitudes |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | static: IAU 2015 models (Archinal et al. 2018). |
+| Rate limits | Not applicable: nothing is fetched. |
+| Caching | Not applicable. |
+| Licence | [NASA NAIF / IAU published constants (no use restrictions stated)](https://naif.jpl.nasa.gov/naif/rules.html) |
+| Attribution | Body orientations and radii from the IAU WGCCRE 2015 report, as published by NASA NAIF in pck00011.tpc. |
+| Limitations | Jupiter’s periodic pole terms (≤ 0.0022°) and Mercury’s libration (≤ 0.011°) are left out. Jupiter, Saturn, Uranus and Neptune turn at their System III (magnetic) rates; their clouds drift against them. |
+| Status | integrated |
+
+### Saturn’s rings (NASA fact sheet)
+
+<a id="nasa-saturn-rings"></a>
+
+| | |
+|---|---|
+| Provider | NASA Goddard Space Flight Center, NSSDCA |
+| Dataset | Saturnian Rings Fact Sheet: radii, optical depth and albedo of the C, B, A and F rings |
+| Description | Saturn’s main rings, drawn to their published radii, opacity and brightness. |
+| Documentation | https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html |
+| Endpoint | `https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html` (bundled; Values compiled into the app) |
+| Capabilities | ephemeris |
+| Authentication | None |
+| CORS (browser) | Not fetched: published values compiled into the app |
+| Coverage | C, B and A rings, the Cassini Division and the F ring. |
+| Resolution | Ring boundaries to the kilometre. |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | static: Last updated by NASA on 19 April 2022. |
+| Rate limits | Not applicable: nothing is fetched. |
+| Caching | Not applicable. |
+| Licence | [NASA public information](https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html) |
+| Attribution | Ring radii, optical depths and albedos from NASA’s Saturnian Rings Fact Sheet. |
+| Limitations | Opacity and brightness use the middle of each published range; ring colour is a display choice. The F ring is listed by its inner edge only (narrower than 1 000 km); it is drawn 500 km wide. Gaps narrower than 1 000 km and the shadows of the rings and planet are not drawn. |
+| Status | integrated |
+
 ### Investigated, not integrated
 
 | Source | Reason |
 |---|---|
+| Saturn global map (USGS planetary WMS, by Björn Jónsson) | Made from Cassini and Voyager images, but no terms of use are stated and the author’s page is gone (HTTP 404, checked 2026-11-01). Saturn is drawn in a plain colour until that is clarified. |
+| Uranus and Neptune “simulated” global mosaics (USGS planetary WMS) | Painted by James Hastings-Trew “from scratch, based on images found around the internet” (USGS abstract): illustrations, not data. Both are drawn in a plain colour. |
+| Sun texture (USGS planetary WMS) | A texture by Solar System Scope, not an observation. The Sun is drawn as a featureless disc with limb darkening. |
 | ISRO Bhuvan WMS and tile cache (India) | Both answer (bhuvan-vec1 WMS, bhuvan-ras2 tile cache) but send no CORS headers (checked 2026-11-01), so a browser on another site cannot read them. OpenStreetMap data covers the same roads, water and places. |
 | Bharatmaps (NIC, India) | Its certificate chain did not verify against the Mozilla root store (SELF_SIGNED_CERT_IN_CHAIN, checked 2026-11-01); not evaluated further. |
 | TN-GIS (Tamil Nadu e-Governance Agency) | Its layers and Web API services sit behind an official or public account login, and its map viewer asks for GeoServer credentials (checked 2026-11-01). |
@@ -1003,6 +1156,6 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | NASA GIBS Reference_Labels and Reference_Features (raster, OpenStreetMap) | Used in v0.1.0, then replaced. The tiles stop at zoom 9 and are only magnified beyond it, so names grow and never thin out as you zoom in, and borders stay coarse. The 15 m variants returned opaque black tiles and HTTP 500s. Borders and place names now come from OpenFreeMap vector tiles, drawn for each zoom. |
 | Esri World Imagery | Tiles respond to browsers, but production use is governed by Esri terms that expect an ArcGIS account. |
 | Stadia / MapTiler / Thunderforest basemaps | Require an API key or domain registration. |
-| Moon, Mars and planetary terrain (NASA Trek WMTS) | Planned for the beyond-Earth phase; not yet evaluated for browser access. |
+| Moon, Mars and Mercury close-up tiles and terrain (NASA Trek WMTS) | Trek’s imagery tiles answer browsers (CORS *, checked 2026-11-01) and go far deeper than the one map per body used now; tiled close-ups and terrain on those bodies are a later step. |
 
 <!-- catalogue:end -->

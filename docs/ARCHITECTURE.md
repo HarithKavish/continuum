@@ -180,8 +180,35 @@ the live shared system, and pinning a hash would break Continuum on each release
 Low-performance mode lowers the resolution scale, uses coarser terrain
 (`maximumScreenSpaceError` 4) and disables MSAA.
 
-## Extending beyond Earth
+## The solar system
 
-Cesium supports arbitrary ellipsoids, so Moon and Mars terrain fit the same provider
-contract (a `TerrainProvider` with a different `Ellipsoid`, imagery from NASA Trek WMTS once
-verified). The catalogue records them as planned, not yet evaluated.
+`spatial/space/` places the Sun, the Moon and the planets around Cesium's globe, which
+stays Earth itself. Cesium's world frame is Earth-fixed, so every body is computed in the
+ICRF and turned into that frame each tick with the same ICRF→Earth rotation Cesium lights
+the globe with (IAU 2006 tables, preloaded for the clock's date).
+
+- **Positions** (`ephemeris.ts`, pure): JPL's approximate Keplerian elements for Mercury to
+  Neptune and the Earth–Moon barycentre (Table 1 for 1800–2050, Tables 2a/2b otherwise),
+  solved as JPL describes; Pluto from Horizons osculating elements, two-body. The Sun and
+  the Moon come from Cesium's Simon et al. (1994) series, so the Sun drawn is exactly
+  where the globe is lit from; a planet's geocentric position is its heliocentric one
+  plus the Sun's.
+- **Orientation** (`orientation.ts`, pure): IAU 2015 pole and prime-meridian models from
+  pck00011, including Mars's and Neptune's periodic terms; the Moon uses Cesium's IAU Moon
+  model. A body's model matrix is Earth-fixed ← ICRF ← body-fixed.
+- **Drawing** (`SolarSystem.ts`): an ellipsoid primitive per body with a material lit by
+  the real direction of the Sun from that body (the Sun itself glows with limb
+  darkening), Saturn's rings as a translucent annulus from NASA's ring values, and orbit
+  lines sampled from the same positions over one period and rebuilt when the clock has
+  moved 1% of it (their model matrix carries the Sun's position, so they cost a uniform
+  per frame). Maps are fetched once a body covers a few pixels. Points and names sit on
+  the line of sight 10 000 km from the camera: Cesium garbles text drawn more than about
+  10¹² m away.
+- **Navigation** (`SpaceCamera.ts`, `SpacePointer.ts`): the camera orbits the focused body
+  in ICRF axes, so the body turns beneath it at its real rate, and follows it. Flights
+  interpolate the offset from the target in direction (slerp) and log-distance. Cesium's
+  mouse controller works in Earth-fixed axes, so it is switched off in space and pointer,
+  wheel and pinch input drive the orbit instead. Scrolling out past the highest Earth view
+  enters space around Earth; orbiting Earth closer than 2.2 radii hands back.
+- **Time.** The clock runs between 1900 and 2100, from real time to 30 days a second;
+  lighting, bodies and orbits all follow it. The Earth layers (clouds, imagery) do not.
