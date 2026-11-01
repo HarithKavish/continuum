@@ -63,9 +63,13 @@ export class CloudShadowProvider {
     return undefined;
   }
 
+  /**
+   * The shadow tile. A failed source request rejects, as the cloud tiles do, so the layer
+   * retries it rather than keeping a tile with shadows missing.
+   */
   async requestImage(x: number, y: number, level: number): Promise<HTMLCanvasElement> {
-    const canvas = Object.assign(document.createElement('canvas'), { width: TILE, height: TILE });
-    if (level < SHADOW_MIN_LEVEL) return canvas;
+    if (level < SHADOW_MIN_LEVEL)
+      return Object.assign(document.createElement('canvas'), { width: TILE, height: TILE });
     const scale = TILE * 2 ** level; // global pixels across the world at this level
     // The tile, widened by the longest shadow at its poleward edge, in global pixels.
     const poleward = Math.max(Math.abs(tileYToLat(y, level)), Math.abs(tileYToLat(y + 1, level)));
@@ -73,6 +77,7 @@ export class CloudShadowProvider {
     const margin = Math.ceil(MAX_SHADOW_OFFSET / Math.max(metresPerPixel, 1));
     const samplers = await this.samplers(x, y, level, margin);
 
+    const canvas = Object.assign(document.createElement('canvas'), { width: TILE, height: TILE });
     const ctx = canvas.getContext('2d')!;
     const out = ctx.createImageData(TILE, TILE);
     const at = (gx: number, gy: number) => {
@@ -118,7 +123,7 @@ export class CloudShadowProvider {
     const left = x * TILE - margin;
     const right = (x + 1) * TILE + margin;
     const satellites = new Set<Satellite>();
-    for (let gx = left; gx <= right; gx += 16)
+    for (let gx = left; gx <= right; gx++)
       satellites.add(satelliteFor((((gx / (TILE * n)) * 360 - 180 + 540) % 360) - 180));
     const result = new Map<Satellite, Sampler>();
     await Promise.all(
@@ -136,10 +141,13 @@ export class CloudShadowProvider {
         for (let tx = x0; tx <= x1; tx++)
           for (let ty = y0; ty <= y1; ty++) {
             const wx = ((tx % m) + m) % m;
+            // null is a source with no data there (no cloud); a failure rejects.
             jobs.push(
-              sourceOpacity(s.source, sourceUrl(s.source, this.time, wx, ty, z), this.priority)
-                .then((grid) => void tiles.set(`${wx}/${ty}`, grid))
-                .catch(() => void tiles.set(`${wx}/${ty}`, null)),
+              sourceOpacity(
+                s.source,
+                sourceUrl(s.source, this.time, wx, ty, z),
+                this.priority,
+              ).then((grid) => void tiles.set(`${wx}/${ty}`, grid)),
             );
           }
         await Promise.all(jobs);
