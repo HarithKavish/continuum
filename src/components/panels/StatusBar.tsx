@@ -105,8 +105,7 @@ export function StatusBar({ creditsRef }: { creditsRef: RefObject<HTMLDivElement
         ref={creditsRef}
         className="credits"
         aria-label="Data attribution"
-        title="Data attribution — click for every source and licence"
-        onClick={() => uiStore.set({ dialog: 'sources' })}
+        title="Data attribution. Every source and licence is under Sources."
       />
       {/* Narrow screens: the credits line has no room, so attribution is one tap away. */}
       <button

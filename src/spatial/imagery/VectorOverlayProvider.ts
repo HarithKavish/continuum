@@ -10,9 +10,9 @@ import { fetchVectorTile } from '../../providers/geography/openfreemapTiles';
 import {
   boundaryStyle,
   dataZoomFor,
-  placeLabels,
+  labelsForTile,
   placeStyle,
-  type LabelCandidate,
+  type AnchoredCandidate,
   type LabelStyle,
   type LineStyle,
 } from './vectorStyle';
@@ -23,7 +23,10 @@ export type VectorOverlayStyle = 'boundaries' | 'places';
 const TILE = 256;
 const SCALE = 2;
 const PX = TILE * SCALE;
-/** Labels anchored this far outside a tile still compete, so both sides of a tile edge agree. */
+/**
+ * Labels anchored this far outside a tile still compete, so both sides of a tile edge agree
+ * (labelsForTile). Within the tile data's own buffer, which for places is a full tile.
+ */
 const MARGIN = PX / 2;
 const LABEL_PADDING = 4 * SCALE;
 const DOT_RADIUS = 1.8 * SCALE;
@@ -109,10 +112,9 @@ function textWidth(ctx: CanvasRenderingContext2D, text: string): number {
   return width;
 }
 
-interface PlaceLabel extends LabelCandidate {
+interface PlaceLabel extends AnchoredCandidate {
   style: LabelStyle;
   font: string;
-  anchor: [number, number];
 }
 
 export class VectorOverlayProvider {
@@ -231,9 +233,7 @@ export class VectorOverlayProvider {
     }
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    for (const c of placeLabels(candidates, LABEL_PADDING)) {
-      const [l, t, r, b] = c.box;
-      if (r < 0 || b < 0 || l > PX || t > PX) continue; // competed, but lies in a neighbour
+    for (const c of labelsForTile(candidates, PX, MARGIN, LABEL_PADDING)) {
       const [ax, ay] = c.anchor;
       ctx.font = c.font;
       ctx.letterSpacing = c.style.upper ? `${SCALE}px` : '0px';

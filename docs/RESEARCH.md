@@ -159,8 +159,11 @@ and borders stay coarse. Borders and place names now come from OpenFreeMap vecto
   and ~0.02 MB from zoom 4, so zoom 2 is never requested.
 - **Over Kerala:** district borders (`admin_level` 5) and their subdivisions (6) are
   absent at zoom 8 and present at zoom 10.
-- **Tile buffer:** place points extend up to a full tile beyond each tile's edge, which
-  lets neighbouring tiles agree on labels near their shared edge.
+- **Tile buffer:** place tiles carry a full tile of buffer. For 60 pairs of neighbouring
+  tiles (five cities, zooms 5–14), all 1 108 places within half a tile of the shared edge
+  were present in both tiles, at the same position. Each tile can therefore decide labels
+  near its edge exactly as its neighbour does, without fetching the neighbour; a unit test
+  covers that decision.
 
 ## 5. Bathymetry, geography, events, weather
 

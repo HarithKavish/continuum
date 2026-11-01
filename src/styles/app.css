@@ -85,18 +85,13 @@ button.site-nav__link {
 }
 
 /* Provider credits, written by Cesium, on the status bar's one line; the Sources dialog
-   (opened by clicking them) has every attribution in full. */
+   has every attribution in full. */
 .credits {
   flex: 1 1 0;
   min-width: 6rem;
   overflow: hidden;
   color: var(--muted);
   text-align: right;
-  cursor: pointer;
-}
-
-.credits:hover {
-  color: var(--text);
 }
 
 .credits .cesium-widget-credits {

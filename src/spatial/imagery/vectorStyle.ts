@@ -108,7 +108,8 @@ const PLACE: Record<
 
 /** Style for an OpenMapTiles place feature, or null if it is not drawn at this level. */
 export function placeStyle(placeClass: string, rank: number, level: number): LabelStyle | null {
-  const entry = PLACE[placeClass];
+  // Classes come from tile data: only the table's own keys count.
+  const entry = Object.hasOwn(PLACE, placeClass) ? PLACE[placeClass] : undefined;
   if (!entry || (entry.maxLevel !== undefined && level > entry.maxLevel)) return null;
   // Major cities (OpenMapTiles rank 1–3) a little larger, then by rank within the class.
   const size = placeClass === 'city' && rank <= 3 ? entry.style.size + 1 : entry.style.size;
@@ -124,6 +125,33 @@ export interface LabelCandidate {
   /** Box in imagery-level pixel space: [left, top, right, bottom]. */
   box: [number, number, number, number];
   priority: number;
+}
+
+export interface AnchoredCandidate extends LabelCandidate {
+  anchor: [number, number];
+}
+
+/**
+ * Labels to draw in a square tile of `size` pixels, from candidates in that tile's pixel
+ * space. Candidates anchored up to `margin` outside the tile compete too, and only labels
+ * reaching into the tile are returned, so a label crossing an edge is decided the same way
+ * on both sides. That relies on each tile's data carrying its neighbours' places near the
+ * edge: OpenMapTiles place tiles do, with a full tile of buffer (checked 2026-11-01: all
+ * 1 108 places within half a tile of 60 shared edges, at zooms 5–14, were in both tiles).
+ */
+export function labelsForTile<T extends AnchoredCandidate>(
+  candidates: T[],
+  size: number,
+  margin: number,
+  padding: number,
+): T[] {
+  const competing = candidates.filter(
+    ({ anchor: [x, y] }) =>
+      x >= -margin && y >= -margin && x <= size + margin && y <= size + margin,
+  );
+  return placeLabels(competing, padding).filter(
+    ({ box: [l, t, r, b] }) => r >= 0 && b >= 0 && l <= size && t <= size,
+  );
 }
 
 /**

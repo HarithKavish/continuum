@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   boundaryStyle,
   dataZoomFor,
+  labelsForTile,
   placeLabels,
   placeStyle,
+  type AnchoredCandidate,
   type LabelCandidate,
 } from '../../src/spatial/imagery/vectorStyle';
 
@@ -86,5 +88,47 @@ describe('label placement', () => {
     const fromLeft = placeLabels(a, 2).map((l) => l.text);
     const fromRight = placeLabels([...a].reverse(), 2).map((l) => l.text);
     expect(fromLeft).toEqual(fromRight);
+  });
+});
+
+describe('labels across a tile edge', () => {
+  const TILE = 512;
+  /** A seeded field of labels over three tiles side by side, in global pixels. */
+  function field(seed: number, count: number): AnchoredCandidate[] {
+    let state = seed;
+    const rand = () => (state = (state * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+    return Array.from({ length: count }, (_, i) => {
+      const x = rand() * 3 * TILE - TILE;
+      const y = rand() * TILE;
+      const w = 40 + rand() * 120;
+      const h = 18 + rand() * 8;
+      return {
+        text: `Place ${i}`,
+        priority: Math.floor(rand() * 6) * 1000 + Math.floor(rand() * 20),
+        anchor: [x, y],
+        box: [x - w / 2, y - h / 2, x + w / 2, y + h / 2],
+      };
+    });
+  }
+  const moveLeft = (c: AnchoredCandidate, dx: number): AnchoredCandidate => ({
+    ...c,
+    anchor: [c.anchor[0] - dx, c.anchor[1]],
+    box: [c.box[0] - dx, c.box[1], c.box[2] - dx, c.box[3]],
+  });
+
+  it('makes the same choice on both sides for every label crossing the edge', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const labels = field(seed, 220);
+      // Tile A spans [0, 512), tile B [512, 1024). Each sees only what its data carries:
+      // its own area plus a tile of buffer on each side.
+      const inA = labels.filter((c) => c.anchor[0] >= -TILE && c.anchor[0] < 2 * TILE);
+      const inB = labels
+        .filter((c) => c.anchor[0] >= 0 && c.anchor[0] < 3 * TILE)
+        .map((c) => moveLeft(c, TILE));
+      const keptA = new Set(labelsForTile(inA, TILE, TILE / 2, 8).map((c) => c.text));
+      const keptB = new Set(labelsForTile(inB, TILE, TILE / 2, 8).map((c) => c.text));
+      for (const c of labels.filter((l) => l.box[0] < TILE && l.box[2] > TILE))
+        expect(keptA.has(c.text), `seed ${seed}, ${c.text}`).toBe(keptB.has(c.text));
+    }
   });
 });

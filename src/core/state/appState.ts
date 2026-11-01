@@ -16,7 +16,9 @@ import { createStore } from './store';
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
 const prefs = loadPreferences();
-const savedOverlays = prefs.overlays?.flatMap((id) => REPLACED_OVERLAYS[id] ?? [id]);
+const savedOverlays = prefs.overlays?.flatMap((id) =>
+  Object.hasOwn(REPLACED_OVERLAYS, id) ? REPLACED_OVERLAYS[id]! : [id],
+);
 
 export const layersStore = createStore({
   baseLayer: prefs.baseLayer ?? DEFAULT_BASE_LAYER,
