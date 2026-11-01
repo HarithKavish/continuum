@@ -4,6 +4,7 @@
 // opacity cloudOpacity() gives it. One provider per frame time; CloudLayer animates them.
 
 import { Event, WebMercatorTilingScheme, type Credit } from 'cesium';
+import { LruCache } from '../../core/net/LruCache';
 import { RequestQueue } from '../../core/net/RequestQueue';
 import { sampleBilinear, tileXToLon } from '../terrain/terrarium';
 import {
@@ -42,8 +43,7 @@ function sourceUrl(source: CloudSource, time: string, x: number, y: number, z: n
 
 // Decoded source tiles, one byte of opacity per pixel (64 KB each): a coarse Meteosat tile
 // serves every deeper tile under it, and every frame of the loop is redrawn as the view moves.
-const CACHE_SIZE = 400;
-const cache = new Map<string, Uint8Array>();
+const cache = new LruCache<Uint8Array>(400);
 
 /** A source tile decoded to cloud opacity (0–255) per pixel, or null where it has none. */
 async function sourceOpacity(
@@ -51,12 +51,8 @@ async function sourceOpacity(
   url: string,
   priority: number,
 ): Promise<Uint8Array | null> {
-  if (cache.has(url)) {
-    const grid = cache.get(url)!;
-    cache.delete(url);
-    cache.set(url, grid);
-    return grid;
-  }
+  const cached = cache.get(url);
+  if (cached) return cached;
   const grid = await queues[source.kind].enqueue(
     url,
     async (signal) => {
@@ -91,10 +87,7 @@ async function sourceOpacity(
     },
     priority,
   );
-  if (grid) {
-    cache.set(url, grid);
-    if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
-  }
+  if (grid) cache.set(url, grid);
   return grid;
 }
 
