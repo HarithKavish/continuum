@@ -1,4 +1,11 @@
 import type { Page } from '@playwright/test';
+import { IMAGERY_LAYERS } from '../../src/config/providers/layers';
+
+/** Saved preferences with exactly these overlays on: every other overlay deliberately off. */
+export function savedOverlays(overlays: string[]): string {
+  const knownOverlays = IMAGERY_LAYERS.filter((l) => l.role === 'overlay').map((l) => l.providerId);
+  return JSON.stringify({ overlays, knownOverlays });
+}
 
 /** Hosts Continuum may contact: its own origin, the shared design system, and catalogued providers. */
 export const ALLOWED_HOSTS = new Set([

@@ -332,6 +332,7 @@ export class Engine {
       overlays: Object.entries(s.overlays)
         .filter(([, o]) => o.enabled)
         .map(([id]) => id),
+      knownOverlays: Object.keys(s.overlays),
     });
     scene.requestRender();
   }
