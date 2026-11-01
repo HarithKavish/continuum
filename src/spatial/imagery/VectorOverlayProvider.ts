@@ -1,5 +1,6 @@
-// A Cesium imagery provider that draws OpenFreeMap vector tiles into transparent tiles:
-// administrative boundaries, or place names. Each imagery level is drawn from the vector
+// A Cesium imagery provider that draws vector tiles into transparent tiles: borders, place
+// names and roads from OpenFreeMap, or building footprints from Overture. Each imagery
+// level is drawn from the vector
 // data for that zoom (dataZoomFor), so detail is added and names thin out or fill in as
 // the camera moves, and text stays the same size on screen at every level — unlike a
 // raster label layer, which stops at its last zoom and is then only magnified.
@@ -8,16 +9,25 @@ import { Event, WebMercatorTilingScheme, type Credit } from 'cesium';
 import type { VectorTile, VectorTileFeature } from '@mapbox/vector-tile';
 import { fetchVectorTile } from '../../providers/geography/openfreemapTiles';
 import {
+  fetchBuildingFootprints,
+  OVERTURE_MAX_ZOOM,
+} from '../../providers/geography/overtureBuildings';
+import {
+  BUILDING_MIN_LEVEL,
   boundaryStyle,
+  buildingStyle,
   dataZoomFor,
   labelsForTile,
   placeStyle,
+  roadLabelStyle,
+  roadStyle,
   type AnchoredCandidate,
   type LabelStyle,
   type LineStyle,
+  type RoadStyle,
 } from './vectorStyle';
 
-export type VectorOverlayStyle = 'boundaries' | 'places';
+export type VectorOverlayStyle = 'boundaries' | 'places' | 'roads' | 'buildings';
 
 /** Declared tile size; tiles are drawn at twice this so text stays sharp on screen. */
 const TILE = 256;
@@ -56,8 +66,20 @@ interface DecodedPlaces {
   extent: number;
   places: { cls: string; rank: number; name: string; x: number; y: number }[];
 }
+interface DecodedRoads {
+  extent: number;
+  lines: { cls: string; tunnel: boolean; rings: { x: number; y: number }[][] }[];
+  names: { cls: string; name: string; rings: { x: number; y: number }[][] }[];
+}
+interface DecodedBuildings {
+  extent: number;
+  /** Outer and inner rings, with each footprint's bounding box for culling. */
+  shapes: { rings: { x: number; y: number }[][]; box: [number, number, number, number] }[];
+}
 const boundaryCache = new WeakMap<VectorTile, DecodedBoundaries>();
 const placeCache = new WeakMap<VectorTile, DecodedPlaces>();
+const roadCache = new WeakMap<VectorTile, DecodedRoads>();
+const buildingCache = new WeakMap<VectorTile, DecodedBuildings>();
 
 function decodeBoundaries(tile: VectorTile): DecodedBoundaries {
   let decoded = boundaryCache.get(tile);
@@ -99,6 +121,54 @@ function decodePlaces(tile: VectorTile): DecodedPlaces {
   return decoded;
 }
 
+function decodeRoads(tile: VectorTile): DecodedRoads {
+  let decoded = roadCache.get(tile);
+  if (decoded) return decoded;
+  const layer = tile.layers['transportation'];
+  const names = tile.layers['transportation_name'];
+  decoded = { extent: layer?.extent ?? 4096, lines: [], names: [] };
+  for (let i = 0; layer && i < layer.length; i++) {
+    const f = layer.feature(i);
+    if (f.type !== 2) continue; // lines only; piers and bridges also come as areas
+    decoded.lines.push({
+      cls: String(f.properties['class'] ?? ''),
+      tunnel: f.properties['brunnel'] === 'tunnel',
+      rings: f.loadGeometry(),
+    });
+  }
+  for (let i = 0; names && i < names.length; i++) {
+    const f = names.feature(i);
+    const name = placeName(f.properties) || String(f.properties['ref'] ?? '').trim();
+    if (f.type !== 2 || !name) continue;
+    decoded.names.push({ cls: String(f.properties['class'] ?? ''), name, rings: f.loadGeometry() });
+  }
+  roadCache.set(tile, decoded);
+  return decoded;
+}
+
+function decodeBuildings(tile: VectorTile): DecodedBuildings {
+  let decoded = buildingCache.get(tile);
+  if (decoded) return decoded;
+  const layer = tile.layers['building'];
+  decoded = { extent: layer?.extent ?? 4096, shapes: [] };
+  for (let i = 0; layer && i < layer.length; i++) {
+    const f = layer.feature(i);
+    if (f.type !== 3 || isTrue(f.properties['is_underground'])) continue;
+    const rings = f.loadGeometry();
+    const box: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const ring of rings)
+      for (const p of ring) {
+        box[0] = Math.min(box[0], p.x);
+        box[1] = Math.min(box[1], p.y);
+        box[2] = Math.max(box[2], p.x);
+        box[3] = Math.max(box[3], p.y);
+      }
+    decoded.shapes.push({ rings, box });
+  }
+  buildingCache.set(tile, decoded);
+  return decoded;
+}
+
 const widths = new Map<string, number>();
 /** Width of `text` in the context's current font and letter spacing, measured once. */
 function textWidth(ctx: CanvasRenderingContext2D, text: string): number {
@@ -115,6 +185,12 @@ function textWidth(ctx: CanvasRenderingContext2D, text: string): number {
 interface PlaceLabel extends AnchoredCandidate {
   style: LabelStyle;
   font: string;
+}
+
+interface RoadLabel extends AnchoredCandidate {
+  font: string;
+  /** Radians, kept between -90 and 90 degrees so names never read upside down. */
+  angle: number;
 }
 
 export class VectorOverlayProvider {
@@ -144,14 +220,18 @@ export class VectorOverlayProvider {
   }
 
   async requestImage(x: number, y: number, level: number): Promise<HTMLCanvasElement> {
-    const dz = dataZoomFor(level);
-    const shift = level - dz;
-    const data = await fetchVectorTile(this.providerId, dz, x >> shift, y >> shift);
     const canvas = Object.assign(document.createElement('canvas'), { width: PX, height: PX });
+    const buildings = this.style === 'buildings';
+    if (buildings && level < BUILDING_MIN_LEVEL) return canvas;
+    const dz = buildings ? Math.min(level, OVERTURE_MAX_ZOOM) : dataZoomFor(level);
+    const shift = level - dz;
+    const data = buildings
+      ? await fetchBuildingFootprints(dz, x >> shift, y >> shift)
+      : await fetchVectorTile(this.providerId, dz, x >> shift, y >> shift);
     if (!data) return canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
-    if (this.style === 'places') await document.fonts.ready;
+    if (this.style === 'places' || this.style === 'roads') await document.fonts.ready;
     // Data-tile units → this tile's canvas pixels.
     const toCanvas = (extent: number) => {
       const k = (2 ** shift * PX) / extent;
@@ -161,8 +241,139 @@ export class VectorOverlayProvider {
     };
     if (this.style === 'boundaries')
       this.drawBoundaries(ctx, decodeBoundaries(data), level, toCanvas);
-    else this.drawPlaces(ctx, decodePlaces(data), level, toCanvas);
+    else if (this.style === 'places') this.drawPlaces(ctx, decodePlaces(data), level, toCanvas);
+    else if (this.style === 'roads') this.drawRoads(ctx, decodeRoads(data), level, toCanvas);
+    else this.drawBuildings(ctx, decodeBuildings(data), level, toCanvas);
     return canvas;
+  }
+
+  private drawRoads(
+    ctx: CanvasRenderingContext2D,
+    data: DecodedRoads,
+    level: number,
+    toCanvas: (extent: number) => (x: number, y: number) => [number, number],
+  ): void {
+    const project = toCanvas(data.extent);
+    const lines: { style: RoadStyle; rings: { x: number; y: number }[][] }[] = [];
+    for (const line of data.lines) {
+      const style = roadStyle(line.cls, level, line.tunnel);
+      if (style) lines.push({ style, rings: line.rings });
+    }
+    // Minor roads first; every casing before any fill, so junctions join cleanly.
+    lines.sort((a, b) => a.style.order - b.style.order);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    for (const pass of ['casing', 'line'] as const) {
+      for (const { style, rings } of lines) {
+        const stroke = pass === 'casing' ? style.casing : style;
+        if (!stroke) continue;
+        ctx.strokeStyle = stroke.color;
+        ctx.lineWidth = stroke.width * SCALE;
+        ctx.setLineDash(pass === 'line' && style.dash ? style.dash.map((d) => d * SCALE) : []);
+        ctx.beginPath();
+        for (const ring of rings) {
+          ring.forEach((pt, j) => {
+            const [px, py] = project(pt.x, pt.y);
+            if (j === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+    this.drawRoadNames(ctx, data, level, project);
+  }
+
+  /** Each name along the longest straight stretch of its road, where it fits. */
+  private drawRoadNames(
+    ctx: CanvasRenderingContext2D,
+    data: DecodedRoads,
+    level: number,
+    project: (x: number, y: number) => [number, number],
+  ): void {
+    const candidates: RoadLabel[] = [];
+    for (const road of data.names) {
+      const style = roadLabelStyle(road.cls, level);
+      if (!style) continue;
+      const font = this.font(style);
+      ctx.font = font;
+      ctx.letterSpacing = '0px';
+      const width = textWidth(ctx, road.name);
+      const height = style.size * SCALE;
+      let best: { a: [number, number]; b: [number, number]; length: number } | null = null;
+      for (const ring of road.rings)
+        for (let j = 1; j < ring.length; j++) {
+          const a = project(ring[j - 1]!.x, ring[j - 1]!.y);
+          const b = project(ring[j]!.x, ring[j]!.y);
+          const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          if (!best || length > best.length) best = { a, b, length };
+        }
+      if (!best || best.length < width + 8 * SCALE) continue;
+      const mx = (best.a[0] + best.b[0]) / 2;
+      const my = (best.a[1] + best.b[1]) / 2;
+      let angle = Math.atan2(best.b[1] - best.a[1], best.b[0] - best.a[0]);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+      // Axis-aligned box around the rotated text, for decluttering.
+      const hw = (Math.abs(Math.cos(angle)) * width + Math.abs(Math.sin(angle)) * height) / 2;
+      const hh = (Math.abs(Math.sin(angle)) * width + Math.abs(Math.cos(angle)) * height) / 2;
+      candidates.push({
+        text: road.name,
+        font,
+        angle,
+        anchor: [mx, my],
+        priority: style.priority,
+        box: [mx - hw, my - hh, mx + hw, my + hh],
+      });
+    }
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.lineJoin = 'round';
+    for (const c of labelsForTile(candidates, PX, MARGIN, LABEL_PADDING)) {
+      ctx.save();
+      ctx.translate(c.anchor[0], c.anchor[1]);
+      ctx.rotate(c.angle);
+      ctx.font = c.font;
+      ctx.letterSpacing = '0px';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.lineWidth = 2.5 * SCALE;
+      ctx.strokeText(c.text, 0, 0);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(c.text, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  private drawBuildings(
+    ctx: CanvasRenderingContext2D,
+    data: DecodedBuildings,
+    level: number,
+    toCanvas: (extent: number) => (x: number, y: number) => [number, number],
+  ): void {
+    const project = toCanvas(data.extent);
+    const style = buildingStyle(level);
+    // One path for every footprint in view: a single fill and stroke.
+    ctx.beginPath();
+    for (const shape of data.shapes) {
+      const [l, t] = project(shape.box[0], shape.box[1]);
+      const [r, b] = project(shape.box[2], shape.box[3]);
+      if (r < 0 || b < 0 || l > PX || t > PX) continue;
+      for (const ring of shape.rings) {
+        ring.forEach((pt, j) => {
+          const [px, py] = project(pt.x, pt.y);
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+      }
+    }
+    ctx.fillStyle = style.fill;
+    ctx.fill('evenodd');
+    ctx.strokeStyle = style.stroke;
+    ctx.lineWidth = style.width * SCALE;
+    ctx.lineJoin = 'miter';
+    ctx.stroke();
   }
 
   private drawBoundaries(

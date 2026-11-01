@@ -242,6 +242,15 @@ export class Engine {
       this.controls.update(dt, intent);
       this.viewer.scene.requestRender();
     }
+
+    // The live cloud loop: it renders only while frames change, and holds the newest frame
+    // in low-power mode.
+    this.imagery.cloudsPlaying = layersStore.get().cloudsPlaying && !statusStore.get().lowPower;
+    if (this.imagery.tick(dt, this.viewer.camera.positionCartographic.height))
+      this.viewer.scene.requestRender();
+    const cloudTime = this.imagery.cloudTime();
+    if (cloudTime !== statusStore.get().cloudTime) statusStore.set({ cloudTime });
+
     this.frameHandle = requestAnimationFrame(this.frame);
   };
 

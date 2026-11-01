@@ -560,6 +560,301 @@ export const PROVIDERS: ProviderMetadata[] = [
   },
   {
     ...openFreeMapCommon,
+    id: 'openfreemap-roads',
+    capabilities: ['vector-tiles'],
+    name: 'Roads and railways (OpenFreeMap)',
+    category: 'geography',
+    dataset: 'OpenMapTiles "transportation" and "transportation_name" layers, planet extract',
+    description:
+      'Roads from motorways to footpaths, railways and ferries, with street names, drawn for each zoom over the imagery.',
+    documentationUrl: 'https://openmaptiles.org/schema/#transportation',
+    coverage: {
+      extent: 'global',
+      description:
+        'Roads as mapped in OpenStreetMap; the tiles add minor roads as zoom increases (service roads and paths at zoom 14).',
+    },
+    resolution:
+      'Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0.6 m at the equator), drawn larger beyond it.',
+    limitations: [
+      'Road widths are a display choice by class and zoom, not the mapped carriageway width.',
+      'A street name is placed along the longest straight stretch of its road in each tile, so curving streets may go unnamed.',
+    ],
+  },
+  {
+    id: 'overture-buildings',
+    name: 'Building footprints (Overture Maps)',
+    organisation:
+      'Overture Maps Foundation, conflating OpenStreetMap, Google Open Buildings, Microsoft Global ML Building Footprints and other sources',
+    category: 'buildings',
+    capabilities: ['vector-tiles'],
+    dataset: 'Overture "buildings" theme, PMTiles archive of the latest release',
+    description:
+      'Building outlines, mapped by people or detected from imagery by machine learning, drawn at neighbourhood scale.',
+    documentationUrl: 'https://docs.overturemaps.org/examples/overture-tiles',
+    homepageUrl: 'https://overturemaps.org/',
+    endpoint: {
+      url: 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/<release>/buildings.pmtiles',
+      protocol: 'mvt',
+      format: 'Mapbox Vector Tiles in a PMTiles archive, read with HTTP range requests',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'global',
+      description:
+        'Global. Far denser than OpenStreetMap alone where machine-detected footprints exist: a zoom-14 tile over central Kochi holds 7 365 buildings (OpenStreetMap via OpenFreeMap: 37).',
+    },
+    resolution:
+      'Vector geometry quantised to the zoom-14 tile grid (4096 units per tile, ~0.6 m at the equator); generalised at lower zooms.',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: {
+      kind: 'periodic',
+      description:
+        'Monthly releases; the latest is read from Overture’s STAC catalogue (stac.overturemaps.org) when the layer first loads.',
+    },
+    licence: {
+      name: 'ODbL (theme); CC BY 4.0 for Google Open Buildings and Esri Community Maps contributions',
+      url: 'https://docs.overturemaps.org/attribution/',
+    },
+    attribution: {
+      short:
+        'Buildings: Overture Maps Foundation, © OpenStreetMap contributors, Google Open Buildings, Microsoft',
+      full: 'Buildings: Overture Maps Foundation (overturemaps.org). © OpenStreetMap contributors (ODbL); Google Open Buildings (CC BY 4.0); Microsoft Global ML Building Footprints (ODbL); Esri Community Maps contributors (CC BY 4.0).',
+    },
+    rateLimits: 'None published. Continuum keeps four range requests in flight at most.',
+    caching: 'Amazon S3 object; tiles are kept decoded in memory for the session only.',
+    limitations: [
+      'Overture publishes these tiles for inspection, not as a production basemap, and removes older releases. If the release in use is withdrawn during a session, the layer shows nothing until reload.',
+      'Footprints only: almost none carry a height (12 of 7 365 in central Kochi), so they are not extruded.',
+      'Machine-detected outlines can be missing, merged or misplaced; each footprint’s source is in the data.',
+      'Zoom-14 tiles reach ~2 MB in dense areas, so footprints load only at neighbourhood scale.',
+    ],
+    status: 'integrated',
+  },
+  {
+    id: 'geostationary-clouds',
+    name: 'Live clouds (geostationary infrared)',
+    organisation: 'EUMETSAT (Meteosat, via EUMETView) and NASA ESDIS GIBS (GOES, Himawari)',
+    category: 'weather',
+    capabilities: ['imagery-tiles'],
+    dataset:
+      'IR 10.8 µm images from Meteosat 0° and Meteosat Indian Ocean (EUMETView WMS msg_fes:ir108, msg_iodc:ir108); Band 13 Clean Infrared from GOES-East, GOES-West and Himawari (GIBS)',
+    description:
+      'Clouds from five geostationary satellites, stitched by longitude and looped over the last four hours, hour by hour.',
+    documentationUrl: 'https://view.eumetsat.int/',
+    homepageUrl: 'https://www.eumetsat.int/',
+    endpoint: {
+      url: 'https://view.eumetsat.int/geoserver/wms; https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/',
+      protocol: 'wms',
+      format: 'PNG; EUMETView WMS GetMap and GIBS WMTS tiles, with a TIME dimension',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'global',
+      description:
+        'All longitudes. Each longitude is drawn by the nearest satellite; imagery thins towards the poles, where geostationary views are oblique.',
+    },
+    resolution:
+      'Infrared imagery of about 2–3 km at the sub-satellite point, coarser towards the edge of each view. GIBS tiles are requested to zoom 5; Meteosat to zoom 3 (~20 km pixels), resampled beyond, because EUMETView renders each request on demand (measured 2026-11-01: 1–15 s per tile for Meteosat Indian Ocean, ~22 s for Meteosat 0°).',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: {
+      kind: 'near-real-time',
+      description:
+        'Hourly frames; the newest is the latest full hour at least 45 minutes ago, so frames are 45–105 minutes old. EUMETView publishes every 15 minutes and GIBS every 10.',
+    },
+    licence: {
+      name: 'EUMETSAT data policy; NASA open data',
+      url: 'https://www.eumetsat.int/eumetsat-streamlines-its-data-and-service-policy-make-more-data-free-charge',
+      notes:
+        'Since 15 January 2019 hourly Meteosat imagery is not subject to licensing, while 15-minute imagery is free three hours after sensing, so Continuum uses hourly frames only. NASA GIBS imagery has no use restrictions.',
+    },
+    attribution: {
+      short: 'Clouds: © EUMETSAT (Meteosat); NASA GIBS (GOES, Himawari)',
+      full: 'Live clouds: © EUMETSAT, Meteosat IR 10.8 µm via EUMETView. NASA ESDIS GIBS, GOES-East, GOES-West and Himawari Band 13 imagery.',
+    },
+    rateLimits:
+      'None published. Continuum keeps six requests in flight at most and requests nothing deeper than zoom 5.',
+    caching:
+      'EUMETView sends Cache-Control: max-age=604800; frames are reused while they stay in the loop.',
+    limitations: [
+      'Opacity is a display rule on the infrared brightness temperature (clear at 0 °C, opaque at −40 °C), not a measured cloud fraction. Warm low cloud and fog are missed, and very cold ground can read as cloud.',
+      'EUMETView publishes its infrared as greyscale without a scale. Its temperatures are fitted against Himawari where both see the same clouds (grey ≈ 70 − 3.2 × T °C, 67 424 pixel pairs over the Bay of Bengal, 2026-11-01).',
+      'Neighbouring satellites see clouds from different angles and at slightly different times, so seams can show along the boundary longitudes.',
+      'The loop shows real hourly frames, crossfaded; it does not interpolate motion between them.',
+      'On a first visit the older frames join the loop as they load, over a minute or more; Europe and Africa (Meteosat 0°) come last. EUMETView responses are cached by the browser for seven days.',
+    ],
+    status: 'integrated',
+  },
+  {
+    id: 'ign-orthophotos',
+    name: 'Aerial photos of France (IGN)',
+    organisation:
+      'Institut national de l’information géographique et forestière (IGN), Géoplateforme',
+    category: 'imagery',
+    capabilities: ['imagery-tiles'],
+    dataset: 'ORTHOIMAGERY.ORTHOPHOTOS (BD ORTHO)',
+    description: 'National aerial orthophotography of metropolitan France.',
+    documentationUrl: 'https://geoservices.ign.fr/services-web',
+    homepageUrl: 'https://geoservices.ign.fr/',
+    endpoint: {
+      url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIXSET=PM',
+      protocol: 'wmts-rest',
+      format: 'JPEG tiles, EPSG:3857, zoom 0–19',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'regional',
+      description:
+        'Metropolitan France. Tiles beyond France come back pure white and are drawn as no data.',
+    },
+    resolution: 'BD ORTHO is a 20 cm product; the service goes to zoom 19 (~0.2 m pixels at 46°N).',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: {
+      kind: 'periodic',
+      description:
+        'Renewed department by department on IGN’s regular aerial survey cycle; dates vary by area.',
+    },
+    licence: {
+      name: 'Licence Ouverte / Open Licence (Etalab)',
+      url: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence/',
+      notes: 'IGN public data has been under the Etalab open licence since 1 January 2021.',
+    },
+    attribution: {
+      short: 'Aerial photos: IGN (Géoplateforme)',
+      full: 'Orthophotos © IGN, Géoplateforme, Licence Ouverte (Etalab).',
+    },
+    rateLimits: 'None published.',
+    caching: 'Provider cache headers.',
+    limitations: ['Shown from regional zoom inwards only, over metropolitan France.'],
+    status: 'integrated',
+  },
+  {
+    id: 'pdok-luchtfoto',
+    name: 'Aerial photos of the Netherlands (PDOK)',
+    organisation: 'Beeldmateriaal Nederland, served by PDOK',
+    category: 'imagery',
+    capabilities: ['imagery-tiles'],
+    dataset: 'Luchtfoto RGB, Actueel_orthoHR',
+    description: 'National high-resolution aerial photography of the Netherlands, current year.',
+    documentationUrl: 'https://www.pdok.nl/',
+    homepageUrl: 'https://www.beeldmateriaal.nl/',
+    endpoint: {
+      url: 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg',
+      protocol: 'wmts-rest',
+      format: 'JPEG tiles, EPSG:3857, zoom 0–21',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'regional',
+      description:
+        'The Netherlands. Tiles beyond it come back pure white and are drawn as no data.',
+    },
+    resolution: '8 cm in the web services (some areas captured at 5 cm).',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: {
+      kind: 'periodic',
+      description: 'Flown annually; "Actueel" is the most recent year.',
+    },
+    licence: { name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' },
+    attribution: {
+      short: 'Aerial photos: Beeldmateriaal Nederland (PDOK)',
+      full: 'Luchtfoto © Beeldmateriaal Nederland, via PDOK, CC BY 4.0.',
+    },
+    rateLimits: 'None published.',
+    caching: 'Provider cache headers.',
+    limitations: ['Shown from regional zoom inwards only, over the Netherlands.'],
+    status: 'integrated',
+  },
+  {
+    id: 'swisstopo-swissimage',
+    name: 'Aerial photos of Switzerland (swisstopo SWISSIMAGE)',
+    organisation: 'Federal Office of Topography swisstopo',
+    category: 'imagery',
+    capabilities: ['imagery-tiles'],
+    dataset: 'ch.swisstopo.swissimage (current)',
+    description: 'National aerial orthophoto mosaic of Switzerland.',
+    documentationUrl: 'https://www.swisstopo.admin.ch/en/orthoimage-swissimage-10',
+    homepageUrl: 'https://www.swisstopo.admin.ch/',
+    endpoint: {
+      url: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      protocol: 'wmts-rest',
+      format: 'JPEG tiles, EPSG:3857, zoom 0–20',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'regional',
+      description: 'Switzerland, with imagery a little beyond its borders.',
+    },
+    resolution: 'SWISSIMAGE 10 cm product; the service goes to zoom 20.',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: {
+      kind: 'periodic',
+      description: 'Renewed on swisstopo’s survey cycle; dates vary by area.',
+    },
+    licence: {
+      name: 'swisstopo free geodata (OGD) terms',
+      url: 'https://www.swisstopo.admin.ch/en/conditions-geodata',
+      notes: 'Free use, including commercial, with the source credited.',
+    },
+    attribution: {
+      short: 'Aerial photos: © swisstopo',
+      full: 'SWISSIMAGE © Federal Office of Topography swisstopo.',
+    },
+    rateLimits: 'None published.',
+    caching: 'Provider cache headers.',
+    limitations: ['Shown from regional zoom inwards only, over Switzerland.'],
+    status: 'integrated',
+  },
+  {
+    id: 'basemap-at-orthofoto',
+    name: 'Aerial photos of Austria (basemap.at)',
+    organisation: 'basemap.at (Austrian federal states and partners)',
+    category: 'imagery',
+    capabilities: ['imagery-tiles'],
+    dataset: 'bmaporthofoto30cm',
+    description: 'Aerial orthophoto mosaic of Austria.',
+    documentationUrl: 'https://basemap.at/en/',
+    homepageUrl: 'https://basemap.at/en/',
+    endpoint: {
+      url: 'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg',
+      protocol: 'xyz',
+      format: 'JPEG tiles, EPSG:3857, zoom 0–20',
+    },
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    coverage: {
+      extent: 'regional',
+      description: 'Austria. Tiles beyond it return 404 and are drawn as no data.',
+    },
+    resolution:
+      'Not stated by the provider (the layer is named "30cm"); the service goes to zoom 20.',
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    temporal: { kind: 'periodic', description: 'Not stated per area.' },
+    licence: {
+      name: 'CC BY 4.0 (Open Government Data Austria)',
+      url: 'https://basemap.at/en/',
+    },
+    attribution: {
+      short: 'Aerial photos: basemap.at',
+      full: 'Data source: basemap.at (CC BY 4.0).',
+    },
+    rateLimits: 'None published.',
+    caching: 'Provider cache headers.',
+    limitations: ['Shown from regional zoom inwards only, over Austria.'],
+    status: 'integrated',
+  },
+  {
+    ...openFreeMapCommon,
     id: 'openfreemap-buildings',
     capabilities: ['vector-tiles'],
     name: 'OpenStreetMap buildings (OpenFreeMap)',

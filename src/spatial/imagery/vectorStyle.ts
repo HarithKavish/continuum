@@ -65,6 +65,219 @@ export function boundaryStyle(
   return null;
 }
 
+/** Width between level stops, interpolated, and doubling per level past the last stop. */
+function widthAt(stops: [number, number][], level: number): number {
+  const first = stops[0]!;
+  if (level <= first[0]) return first[1];
+  for (let i = 1; i < stops.length; i++) {
+    const [l1, w1] = stops[i]!;
+    const [l0, w0] = stops[i - 1]!;
+    if (level <= l1) return w0 + ((w1 - w0) * (level - l0)) / (l1 - l0);
+  }
+  const [lastLevel, lastWidth] = stops[stops.length - 1]!;
+  return lastWidth * 2 ** (level - lastLevel);
+}
+
+const ROADS: Record<
+  string,
+  {
+    order: number;
+    minLevel: number;
+    color: string;
+    widths: [number, number][];
+    dash?: number[];
+    cased?: boolean;
+  }
+> = {
+  motorway: {
+    order: 9,
+    minLevel: 5,
+    color: '#ffa94d',
+    cased: true,
+    widths: [
+      [5, 0.8],
+      [8, 1.4],
+      [12, 3],
+      [15, 6],
+      [18, 16],
+    ],
+  },
+  trunk: {
+    order: 8,
+    minLevel: 6,
+    color: '#ffc46b',
+    cased: true,
+    widths: [
+      [6, 0.7],
+      [8, 1.2],
+      [12, 2.6],
+      [15, 5.5],
+      [18, 15],
+    ],
+  },
+  primary: {
+    order: 7,
+    minLevel: 7,
+    color: '#ffe08a',
+    cased: true,
+    widths: [
+      [7, 0.6],
+      [10, 1.2],
+      [12, 2.2],
+      [15, 5],
+      [18, 14],
+    ],
+  },
+  secondary: {
+    order: 6,
+    minLevel: 9,
+    color: '#fff2b3',
+    cased: true,
+    widths: [
+      [9, 0.6],
+      [12, 1.8],
+      [15, 4.5],
+      [18, 12],
+    ],
+  },
+  tertiary: {
+    order: 5,
+    minLevel: 10,
+    color: '#ffffff',
+    cased: true,
+    widths: [
+      [10, 0.5],
+      [12, 1.4],
+      [15, 4],
+      [18, 11],
+    ],
+  },
+  minor: {
+    order: 4,
+    minLevel: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    cased: true,
+    widths: [
+      [12, 0.6],
+      [15, 3],
+      [18, 9],
+    ],
+  },
+  busway: {
+    order: 4,
+    minLevel: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    cased: true,
+    widths: [
+      [12, 0.6],
+      [15, 3],
+      [18, 9],
+    ],
+  },
+  service: {
+    order: 3,
+    minLevel: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    widths: [
+      [14, 0.8],
+      [16, 2],
+      [18, 5],
+    ],
+  },
+  track: {
+    order: 2,
+    minLevel: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    dash: [3, 2],
+    widths: [
+      [14, 0.6],
+      [18, 2],
+    ],
+  },
+  path: {
+    order: 2,
+    minLevel: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    dash: [2, 2],
+    widths: [
+      [14, 0.6],
+      [18, 2],
+    ],
+  },
+  rail: {
+    order: 1,
+    minLevel: 8,
+    color: 'rgba(225, 225, 225, 0.9)',
+    dash: [4, 3],
+    widths: [
+      [8, 0.5],
+      [14, 1.2],
+      [18, 3],
+    ],
+  },
+  transit: {
+    order: 1,
+    minLevel: 10,
+    color: 'rgba(225, 225, 225, 0.9)',
+    dash: [3, 3],
+    widths: [
+      [10, 0.5],
+      [14, 1.1],
+      [18, 3],
+    ],
+  },
+  ferry: {
+    order: 0,
+    minLevel: 8,
+    color: 'rgba(140, 200, 255, 0.85)',
+    dash: [4, 4],
+    widths: [
+      [8, 0.6],
+      [18, 1.6],
+    ],
+  },
+};
+
+export interface RoadStyle extends LineStyle {
+  /** Higher is drawn later, on top. */
+  order: number;
+}
+
+/** Style for an OpenMapTiles transportation line, or null if not drawn at this level. */
+export function roadStyle(roadClass: string, level: number, tunnel: boolean): RoadStyle | null {
+  const road = Object.hasOwn(ROADS, roadClass) ? ROADS[roadClass] : undefined;
+  if (!road || level < road.minLevel) return null;
+  const width = widthAt(road.widths, level);
+  return {
+    order: road.order,
+    width,
+    // Tunnels show faintly: the road is there, but under the ground.
+    color: tunnel ? 'rgba(255, 255, 255, 0.35)' : road.color,
+    ...(road.dash ? { dash: road.dash } : tunnel ? { dash: [3, 3] } : {}),
+    ...(road.cased && !tunnel
+      ? { casing: { width: width + 1.4, color: 'rgba(0, 0, 0, 0.45)' } }
+      : {}),
+  };
+}
+
+/** Road names: major roads from zoom 13, the rest from 15. */
+export function roadLabelStyle(roadClass: string, level: number): LabelStyle | null {
+  const road = Object.hasOwn(ROADS, roadClass) ? ROADS[roadClass] : undefined;
+  if (!road || road.order < 4 || level < (road.order >= 6 ? 13 : 15)) return null;
+  return { priority: (10 - road.order) * 1000, size: 8.5, weight: 500, color: '#fff' };
+}
+
+/** Building footprints: drawn from this imagery level, from the zoom-14 archive. */
+export const BUILDING_MIN_LEVEL = 14;
+
+export function buildingStyle(level: number): { fill: string; stroke: string; width: number } {
+  return {
+    fill: 'rgba(255, 214, 170, 0.28)',
+    stroke: 'rgba(255, 236, 214, 0.85)',
+    width: level >= 16 ? 0.8 : 0.5,
+  };
+}
+
 export interface LabelStyle {
   /** Lower is placed first. */
   priority: number;

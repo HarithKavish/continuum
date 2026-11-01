@@ -82,6 +82,30 @@ export function wrapTileX(x: number, z: number): number {
 }
 
 /**
+ * The tile holding a sample at fractional tile coordinates (f), among the tiles `has`
+ * reports as loaded. A sample on the shared edge of two tiles can land a hair either side
+ * of it in floating point; both tiles hold that edge, so whichever was loaded is used.
+ * Returns the tile column and row (x unwrapped), or null if none of them is loaded.
+ */
+export function tileForSample(
+  f: { x: number; y: number },
+  z: number,
+  has: (x: number, y: number) => boolean,
+  epsilon = 1e-6,
+): { tx: number; ty: number } | null {
+  const max = 2 ** z - 1;
+  const xs = [Math.floor(f.x)];
+  if (f.x - xs[0]! < epsilon) xs.push(xs[0]! - 1);
+  if (xs[0]! + 1 - f.x < epsilon) xs.push(xs[0]! + 1);
+  const y0 = Math.min(max, Math.floor(f.y));
+  const ys = [y0];
+  if (f.y - y0 < epsilon && y0 > 0) ys.push(y0 - 1);
+  if (y0 + 1 - f.y < epsilon && y0 < max) ys.push(y0 + 1);
+  for (const ty of ys) for (const tx of xs) if (has(wrapTileX(tx, z), ty)) return { tx, ty };
+  return null;
+}
+
+/**
  * Bilinear sample of a decoded tile at fractional pixel coordinates. Pixel centres sit at
  * integer + 0.5; coordinates are clamped to the tile, so callers handle cross-tile seams.
  */
