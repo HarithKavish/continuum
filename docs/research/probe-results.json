@@ -1,0 +1,820 @@
+{
+  "probedAt": "2026-11-01T01:32:59.468Z",
+  "origin": "http://continuum-probe.test",
+  "results": [
+    {
+      "id": "aws-terrarium-z0",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/0/0/0.png",
+      "ms": 1298,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "aws-terrarium-z12-everest",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/3037/1716.png",
+      "ms": 276,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "aws-terrarium-z15",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/15/24063/13729.png",
+      "ms": 274,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "aws-terrarium-sources-header",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/3037/1716.png",
+      "ms": 274,
+      "ok": true,
+      "bytes": 64028,
+      "contentRange": null,
+      "imagerySources": "srtm/N27E086.tif, srtm/N27E087.tif",
+      "sample": null,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "aws-normal-z1",
+      "status": "not used",
+      "kind": "img",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/normal/1/1/0.png",
+      "ms": 282,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "aws-geotiff-z1",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/1/1/0.tif",
+      "ms": 525,
+      "ok": true,
+      "bytes": 346006,
+      "contentRange": null,
+      "imagerySources": "gmted/30N090E_20101117_gmted_mea300.tif, gmted/30N060E_20101117_gmted_mea300.tif, gmted/50N090E_20101117_gmted_mea300.tif, gmted/50N060E_20101117_gmted_mea300.tif, gmted/10N060E_20101117_gmted_mea300.tif, gmted/10N090E_20101117_gmted_mea300.tif, gmted/70N060E_20101117_gmted_mea300.tif, gmted/70N090E_20101117_gmted_mea300.tif, gmted/10S060E_20101117_gmted_mea300.tif, gmted/30N120E_20101117_gmted_mea300.tif, gmted/10N120E_20101117_gmted_mea300.tif, gmted/30N030E_20101117_gmted_mea300.tif, gmted/10S090E_20101117_gmted_mea300.tif, gmted/50N120E_20101117_gmted_mea300.tif, gmted/50N030E_20101117_gmted_mea300.tif, gmted/10N030E_20101117_gmted_mea300.tif, gmted/70N030E_20101117_gmted_mea300.tif, gmted/70N120E_20101117_gmted_mea300.tif, gmted/10S120E_20101117_gmted_mea300.tif, gmted/30N150E_20101117_gmted_mea300.tif, gmted/10S030E_20101117_gmted_mea300.tif, gmted/50N000E_20101117_gmted_mea300.tif, gmted/30N000E_20101117_gmted_mea300.tif, gmted/70N150E_20101117_gmted_mea300.tif, gmted/50N150E_20101117_gmted_mea300.tif, gmted/70N000E_20101117_gmted_mea300.tif, gmted/10N000E_20101117_gmted_mea300.tif, gmted/10N150E_20101117_gmted_mea300.tif, gmted/10S000E_20101117_gmted_mea300.tif, gmted/10S150E_20101117_gmted_mea300.tif, gmted/50N180W_20101117_gmted_mea300.tif, gmted/70N180W_20101117_gmted_mea300.tif, etopo1/ETOPO1_Bed_g.tif",
+      "sample": null,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "image/tiff",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "aws-skadi",
+      "status": 206,
+      "kind": "range",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N27/N27E086.hgt.gz",
+      "ms": 344,
+      "ok": true,
+      "bytes": 1024,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": null,
+      "http": {
+        "status": 206,
+        "acao": "*",
+        "cache": null,
+        "ctype": "application/x-gzip",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "copernicus-dem-30-cog",
+      "status": "future (no CORS)",
+      "kind": "range",
+      "url": "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N27_00_E086_00_DEM/Copernicus_DSM_COG_10_N27_00_E086_00_DEM.tif",
+      "ms": 543,
+      "ok": false,
+      "error": "TypeError: Failed to fetch",
+      "http": null
+    },
+    {
+      "id": "copernicus-dem-90-cog",
+      "status": "future (no CORS)",
+      "kind": "range",
+      "url": "https://copernicus-dem-90m.s3.amazonaws.com/Copernicus_DSM_COG_30_N27_00_E086_00_DEM/Copernicus_DSM_COG_30_N27_00_E086_00_DEM.tif",
+      "ms": 518,
+      "ok": false,
+      "error": "TypeError: Failed to fetch",
+      "http": null
+    },
+    {
+      "id": "gibs-3857-capabilities",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml",
+      "ms": 948,
+      "ok": true,
+      "bytes": 5847490,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "<Capabilities xsi:schemaLocation='http://www.opengis.net/wmts/1.0\n    http://schemas.opengis.net/wmts/1.0/wmtsGetCapabilities_response.xsd' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:gml='http://www.opengis.net/gml' version='1.0.0' xmlns:ow",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=1800",
+        "ctype": "text/xml; charset=UTF-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-modis-terra",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-10-30/GoogleMapsCompatible_Level9/3/3/4.jpg",
+      "ms": 486,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 3,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/jpeg",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-viirs-noaa20",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/2026-10-30/GoogleMapsCompatible_Level9/3/3/4.jpg",
+      "ms": 469,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/jpeg",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-bluemarble-bathy",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/2/1/2.jpeg",
+      "ms": 346,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=259200",
+        "ctype": "image/jpeg",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-black-marble",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/2/1/2.png",
+      "ms": 495,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "eox-s2cloudless-2025-wgs84",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025/default/WGS84/3/2/11.jpg",
+      "ms": 701,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "http://continuum-probe.test",
+        "cache": "max-age=604800",
+        "ctype": "image/jpeg",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "eox-capabilities",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/WMTSCapabilities.xml",
+      "ms": 180,
+      "ok": true,
+      "bytes": 67911,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Capabilities xmlns=\"http://www.opengis.net/wmts/1.0\" xmlns:ows=\"http://www.opengis.net/ows/1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:gml=\"http://www.opengis.net/gml\" xmlns:inspire_common=\"http:/",
+      "http": {
+        "status": 200,
+        "acao": "http://continuum-probe.test",
+        "cache": null,
+        "ctype": "application/xml",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "usgs-imagery-only",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/5/12/9",
+      "ms": 392,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=86400",
+        "ctype": "image/jpeg",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "esri-world-imagery",
+      "status": "rejected (terms)",
+      "kind": "img",
+      "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/3/3/4",
+      "ms": 29,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=86400",
+        "ctype": "image/jpeg",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-reference-labels",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels/default/GoogleMapsCompatible_Level9/4/6/11.png",
+      "ms": 342,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=259200",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-reference-labels-15m",
+      "status": "rejected (opaque tiles, HTTP 500)",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels_15m/default/GoogleMapsCompatible_Level13/2/1/2.png",
+      "ms": 329,
+      "ok": false,
+      "error": "img error (CORS or HTTP)",
+      "http": {
+        "status": 500,
+        "acao": "*",
+        "cache": "public, max-age=259200",
+        "ctype": "text/html; charset=iso-8859-1",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-reference-features",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Features/default/GoogleMapsCompatible_Level9/4/6/11.png",
+      "ms": 372,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=259200",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-coastlines-15m",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Coastlines_15m/default/GoogleMapsCompatible_Level13/4/6/11.png",
+      "ms": 517,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=259200",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "openfreemap-tilejson",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://tiles.openfreemap.org/planet",
+      "ms": 229,
+      "ok": true,
+      "bytes": 19254,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"tilejson\":\"3.0.0\",\"tiles\":[\"https://tiles.openfreemap.org/planet/20261025_080012_pt/{z}/{x}/{y}.pbf\"],\"vector_layers\":[{\"id\":\"aerodrome_label\",\"fields\":{\"class\":\"String\",\"ele\":\"Number\",\"ele_ft\":\"Number\",\"iata\":\"String\",\"icao\":\"String\",\"name\":\"String\",\"name:af\":\"String\",\"name:am\":\"String\",\"name:ar\"",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=3600, public",
+        "ctype": "application/json",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "openfreemap-vector-tile-z14",
+      "status": 200,
+      "kind": "openfreemap-tile",
+      "url": "https://tiles.openfreemap.org/planet",
+      "ms": 262,
+      "ok": true,
+      "bytes": 553628,
+      "sample": "https://tiles.openfreemap.org/planet/20261025_080012_pt/14/4823/6160.pbf",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=3600, public",
+        "ctype": "application/json",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "osm-standard-tiles",
+      "status": "rejected (usage policy)",
+      "kind": "img",
+      "url": "https://tile.openstreetmap.org/3/4/3.png",
+      "ms": 52,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=90111, stale-while-revalidate=604800, stale-if-error=604800",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "carto-labels",
+      "status": "not used (NC quota)",
+      "kind": "img",
+      "url": "https://a.basemaps.cartocdn.com/dark_only_labels/3/4/3.png",
+      "ms": 45,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=2592000, immutable",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "opentopomap",
+      "status": "not used",
+      "kind": "img",
+      "url": "https://a.tile.opentopomap.org/3/4/3.png",
+      "ms": 884,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=604800",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-opera-dswx",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/OPERA_L3_Dynamic_Surface_Water_Extent-HLS/default/2026-10-24/GoogleMapsCompatible_Level12/3/3/5.png",
+      "ms": 826,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-viirs-flood",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Combined_Flood_1-Day/default/2026-10-30/GoogleMapsCompatible_Level9/3/3/5.png",
+      "ms": 462,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-imerg",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/IMERG_Precipitation_Rate/default/2026-10-30/GoogleMapsCompatible_Level6/2/1/2.png",
+      "ms": 449,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gibs-ghrsst",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GHRSST_L4_MUR_Sea_Surface_Temperature/default/2026-10-24/GoogleMapsCompatible_Level7/2/1/2.png",
+      "ms": 476,
+      "ok": true,
+      "w": 256,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0, no-store, no-cache, must-revalidate",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gebco-wms-capabilities",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://wms.gebco.net/mapserv?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities",
+      "ms": 1051,
+      "ok": true,
+      "bytes": 24420,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "<?xml version='1.0' encoding=\"UTF-8\" standalone=\"no\" ?>\n<WMS_Capabilities version=\"1.3.0\"  xmlns=\"http://www.opengis.net/wms\"   xmlns:sld=\"http://www.opengis.net/sld\"   xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"   xmlns:ms=\"http://mapserver.gis.umn.edu/mapserver\"   xsi:schemaLocation=\"htt",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=2630000, public",
+        "ctype": "text/xml; charset=UTF-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gebco-wms-getmap",
+      "status": "integrated",
+      "kind": "img",
+      "url": "https://wms.gebco.net/mapserv?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=GEBCO_LATEST_2&STYLES=&SRS=EPSG:4326&BBOX=-180,-90,180,90&WIDTH=512&HEIGHT=256&FORMAT=image/png&TRANSPARENT=true",
+      "ms": 8978,
+      "ok": true,
+      "w": 512,
+      "h": 256,
+      "opaqueBlackPct": 0,
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=2630000, public",
+        "ctype": "image/png",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "gebco-wms-featureinfo",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://wms.gebco.net/mapserv?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo&LAYERS=GEBCO_LATEST_2&QUERY_LAYERS=GEBCO_LATEST_2&STYLES=&SRS=EPSG:4326&BBOX=142.1,11.3,142.3,11.5&WIDTH=101&HEIGHT=101&X=50&Y=50&INFO_FORMAT=text/plain&FORMAT=image/png",
+      "ms": 697,
+      "ok": true,
+      "bytes": 55,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "GetFeatureInfo results:\n\n  Search returned no results.\n",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=2630000, public",
+        "ctype": "text/plain; charset=UTF-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "noaa-dem-global-mosaic-identify",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/DEM_mosaics/DEM_global_mosaic/ImageServer/identify?geometry=%7B%22x%22%3A142.2%2C%22y%22%3A11.35%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=true&f=json",
+      "ms": 1063,
+      "ok": true,
+      "bytes": 6208,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"objectId\":0,\"name\":\"Pixel\",\"value\":\"-10317.6\",\"location\":{\"x\":142.19999999999999,\"y\":11.35,\"spatialReference\":{\"wkid\":4326,\"latestWkid\":4326}},\"properties\":{\"Values\":[\"-10324.5\",\"-10322.7\",\"-10350.3\",\"-10350.5\",\"-10275.1\",\"-9925.61\",\"-9447.72\",\"-9260.53\",\"-7098.3\",\"-4940.27\",\"-10259.9\"]},\"catalogI",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=0,must-revalidate",
+        "ctype": "application/json;charset=UTF-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "opentopodata-gebco",
+      "status": "rejected (no CORS)",
+      "kind": "fetch",
+      "url": "https://api.opentopodata.org/v1/gebco2020?locations=11.35,142.2",
+      "ms": 630,
+      "ok": false,
+      "error": "TypeError: Failed to fetch",
+      "http": null
+    },
+    {
+      "id": "usgs-earthquakes-day",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+      "ms": 415,
+      "ok": true,
+      "bytes": 150469,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"type\":\"FeatureCollection\",\"metadata\":{\"generated\":1793496717000,\"url\":\"https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson\",\"title\":\"USGS All Earthquakes, Past Day\",\"status\":200,\"api\":\"2.8.2\",\"count\":210},\"features\":[{\"type\":\"Feature\",\"properties\":{\"mag\":2.1,\"place\":\"23 km W ",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "public, max-age=60",
+        "ctype": "application/json; charset=utf-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "eonet-events",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=5",
+      "ms": 1039,
+      "ok": true,
+      "bytes": 5277,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\n\t\"title\": \"EONET Events\",\n\t\"description\": \"Natural events from EONET.\",\n\t\"link\": \"https://eonet.gsfc.nasa.gov/api/v3/events\",\n\t\"events\": [\n\t\t{\n\t\t\t\"id\": \"EONET_25827\",\n\t\t\t\"title\": \"Wildfire South Tank Trail, Perry, Mississippi\",\n            \"description\": null,\n\t\t\t\"link\": \"https://eonet.gsfc.nasa.g",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "no-cache, private",
+        "ctype": "application/rss+xml; charset=utf-8",
+        "ratelimit": {
+          "x-ratelimit-remaining": "59",
+          "x-ratelimit-limit": "60"
+        }
+      }
+    },
+    {
+      "id": "eonet-categories",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://eonet.gsfc.nasa.gov/api/v3/categories",
+      "ms": 277,
+      "ok": true,
+      "bytes": 4469,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\n\t\"title\": \"EONET Event Categories\",\n\t\"description\": \"List of all the available event categories in the EONET system\",\n\t\"link\": \"https://eonet.gsfc.nasa.gov/api/v3/categories\",\n\t\"categories\": [\n\t\t{\n\t\t\t\"id\": \"drought\",\n\t\t\t\"title\": \"Drought\",\n\t\t\t\"link\": \"https://eonet.gsfc.nasa.gov/api/v3/categories/",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "no-cache, private",
+        "ctype": "application/rss+xml; charset=utf-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "open-meteo-elevation",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://api.open-meteo.com/v1/elevation?latitude=27.9881&longitude=86.925",
+      "ms": 721,
+      "ok": true,
+      "bytes": 22,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"elevation\":[8724.0]}",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "application/json",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "open-meteo-forecast",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=7.29&longitude=80.63&current=temperature_2m,wind_speed_10m,relative_humidity_2m",
+      "ms": 185,
+      "ok": true,
+      "bytes": 422,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"latitude\":7.275923,\"longitude\":80.62659,\"generationtime_ms\":0.05614757537841797,\"utc_offset_seconds\":0,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"elevation\":518.0,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\",\"wind_speed_10m\":\"km/h\",\"relative_humidity_2m\":\"%\"},",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "application/json; charset=utf-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "usgs-epqs",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://epqs.nationalmap.gov/v1/json?x=-105.2705&y=40.015&wkid=4326&units=Meters&includeDate=true",
+      "ms": 973,
+      "ok": true,
+      "bytes": 206,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"location\":{\"x\":-105.2705,\"y\":40.015,\"spatialReference\":{\"wkid\":4326,\"latestWkid\":4326}},\"locationId\":0,\"value\":\"1621.260986328\",\"rasterId\":72000,\"resolution\":1,\"attributes\":{\"AcquisitionDate\":\"2/6/2021\"}}",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "application/json",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "nominatim",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://nominatim.openstreetmap.org/search?q=Kandy&format=jsonv2&limit=1",
+      "ms": 40,
+      "ok": true,
+      "bytes": 440,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "[{\"place_id\":254787051,\"licence\":\"Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright\",\"osm_type\":\"node\",\"osm_id\":2908772560,\"lat\":\"7.2931208\",\"lon\":\"80.6350358\",\"category\":\"place\",\"type\":\"city\",\"place_rank\":16,\"importance\":0.5428699199556277,\"addresstype\":\"city\",\"name\":\"Kandy\",\"d",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": null,
+        "ctype": "application/json; charset=utf-8",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "photon",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://photon.komoot.io/api/?q=Kandy&limit=1",
+      "ms": 506,
+      "ok": true,
+      "bytes": 395,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"osm_type\":\"N\",\"osm_id\":2908772560,\"osm_key\":\"place\",\"osm_value\":\"city\",\"type\":\"city\",\"name\":\"Kandy\",\"county\":\"Kandy District\",\"state\":\"Central Province\",\"country\":\"ශ්‍රී ලංකාව இலங்கை\",\"postcode\":",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "max-age=3600",
+        "ctype": "application/json",
+        "ratelimit": {}
+      }
+    },
+    {
+      "id": "opensky-anonymous",
+      "status": "future (CORS restricted)",
+      "kind": "fetch",
+      "url": "https://opensky-network.org/api/states/all?lamin=45.8&lomin=5.9&lamax=47.8&lomax=10.5",
+      "ms": 395,
+      "ok": false,
+      "error": "TypeError: Failed to fetch",
+      "http": null
+    },
+    {
+      "id": "rainviewer",
+      "status": 200,
+      "kind": "fetch",
+      "url": "https://api.rainviewer.com/public/weather-maps.json",
+      "ms": 499,
+      "ok": true,
+      "bytes": 818,
+      "contentRange": null,
+      "imagerySources": null,
+      "sample": "{\"version\":\"2.0\",\"generated\":1793496625,\"host\":\"https://tilecache.rainviewer.com\",\"radar\":{\"past\":[{\"time\":1793489400,\"path\":\"/v2/radar/6f24eaba662c\"},{\"time\":1793490000,\"path\":\"/v2/radar/920ac23463ab\"},{\"time\":1793490600,\"path\":\"/v2/radar/381cafa5617f\"},{\"time\":1793491200,\"path\":\"/v2/radar/8857d2b8",
+      "http": {
+        "status": 200,
+        "acao": "*",
+        "cache": "no-cache",
+        "ctype": "application/json",
+        "ratelimit": {}
+      }
+    }
+  ]
+}
