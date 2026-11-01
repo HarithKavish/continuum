@@ -100,6 +100,8 @@ export class ImageryManager {
   onError: (() => void) | null = null;
   /** Whether the cloud loop plays; when false the newest frame is shown. */
   cloudsPlaying = true;
+  /** Whether clouds cast shadows (realistic lighting). */
+  cloudShadows = true;
 
   constructor(private readonly viewer: Viewer) {}
 
@@ -184,7 +186,13 @@ export class ImageryManager {
       }
     }
     return (
-      entry.clouds.update(dtSeconds, this.cloudsPlaying, this.cloudOpacity, cameraHeight) || changed
+      entry.clouds.update(
+        dtSeconds,
+        this.cloudsPlaying,
+        this.cloudOpacity,
+        cameraHeight,
+        this.cloudShadows,
+      ) || changed
     );
   }
 
