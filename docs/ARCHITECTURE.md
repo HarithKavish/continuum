@@ -117,6 +117,14 @@ Cesium objects: components read stores and call engine methods.
   crossfades between frames that are at least 80% loaded, at 15 updates a second, so the
   globe renders only while frames change. Clouds fade out between 1 500 km and 150 km
   altitude, and hold the newest frame in low-performance mode.
+- **Cloud shadows.** Under realistic lighting each frame also has a `CloudShadowProvider`
+  layer, beneath every cloud layer and crossfaded with its frame. Each pixel takes the cloud
+  whose shadow falls on it: towards the Sun at the frame's time, by the cloud top's height
+  over the tangent of the Sun's elevation. The height comes from the cloud-top temperature
+  through the standard atmosphere, found in two steps because it depends on the cloud being
+  looked for. It reads the frame's own decoded source tiles (and neighbours where a shadow
+  crosses an edge), so it adds no new kind of request, and it draws from level 4 down,
+  where an offset of tens of kilometres is more than a pixel.
 
 ## Terrain pipeline
 

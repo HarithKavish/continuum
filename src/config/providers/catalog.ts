@@ -736,6 +736,7 @@ export const PROVIDERS: ProviderMetadata[] = [
       'EUMETView publishes its infrared as greyscale without a scale. Its temperatures are fitted against Himawari where both see the same clouds (grey ≈ 70 − 3.2 × T °C, 67 424 pixel pairs over the Bay of Bengal, 2026-11-01).',
       'Neighbouring satellites see clouds from different angles and at slightly different times, so seams can show along the boundary longitudes.',
       'The loop shows real hourly frames, crossfaded; it does not interpolate motion between them.',
+      'Shadows place cloud tops by temperature with the standard atmosphere (6.5 K per km), a model rather than a measured height; see docs/ACCURACY.md.',
       'On a first visit the older frames join the loop as they load, over a minute or more; Europe and Africa (Meteosat 0°) come last. EUMETView responses are cached by the browser for seven days.',
     ],
     status: 'integrated',
