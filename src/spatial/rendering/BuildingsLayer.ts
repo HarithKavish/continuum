@@ -9,6 +9,7 @@ import {
   ColorGeometryInstanceAttribute,
   GeometryInstance,
   PerInstanceColorAppearance,
+  type Appearance,
   PolygonGeometry,
   PolygonHierarchy,
   Primitive,
@@ -24,6 +25,7 @@ import {
 import { geoidUndulation, isGeoidReady } from '../geoid/egm96';
 import { lonLatToTileFraction, wrapTileX } from '../terrain/terrarium';
 import type { TerrariumTileSource } from '../terrain/TerrariumTileSource';
+import { buildingAppearance } from './daylight';
 
 interface TileEntry {
   controller: AbortController;
@@ -34,11 +36,27 @@ interface TileEntry {
 export class BuildingsLayer {
   private readonly tiles = new Map<string, TileEntry>();
   private visible = true;
+  private realistic = false;
+  private appearance: Appearance = buildingAppearance(false);
 
   constructor(
     private readonly viewer: Viewer,
     private readonly terrain: TerrariumTileSource,
   ) {}
+
+  get realisticLighting(): boolean {
+    return this.realistic;
+  }
+
+  /** Shade buildings by day and night (realistic lighting), or always lit. */
+  set realisticLighting(realistic: boolean) {
+    if (realistic === this.realistic) return;
+    this.realistic = realistic;
+    this.appearance = buildingAppearance(realistic);
+    for (const entry of this.tiles.values())
+      if (entry.primitive) entry.primitive.appearance = this.appearance;
+    this.viewer.scene.requestRender();
+  }
 
   /** Called as the camera moves. `centre` is the point under the screen centre. */
   update(
@@ -134,7 +152,7 @@ export class BuildingsLayer {
           entry.primitive = this.viewer.scene.primitives.add(
             new Primitive({
               geometryInstances: instances,
-              appearance: new PerInstanceColorAppearance({ translucent: false, closed: true }),
+              appearance: this.appearance,
               asynchronous: true,
               releaseGeometryInstances: true,
             }),

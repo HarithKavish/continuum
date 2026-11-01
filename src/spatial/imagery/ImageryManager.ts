@@ -17,9 +17,19 @@ import {
   type Viewer,
 } from 'cesium';
 import { providerById } from '../../config/providers/catalog';
-import { IMAGERY_LAYERS, type ImageryLayerDefinition } from '../../config/providers/layers';
+import {
+  IMAGERY_LAYERS,
+  layerDefinition,
+  type ImageryLayerDefinition,
+} from '../../config/providers/layers';
 import { cloudFrameTimes } from './cloudImagery';
 import { CloudLayer } from './CloudLayer';
+import {
+  NIGHT_LIGHTS,
+  NIGHT_LIGHTS_BRIGHTNESS,
+  NIGHT_LIGHTS_SOURCE,
+  nightLightsAlpha,
+} from './nightLights';
 import { VectorOverlayProvider } from './VectorOverlayProvider';
 
 export interface ImageryState {
@@ -27,6 +37,8 @@ export interface ImageryState {
   baseOpacity: number;
   imageryDate: string;
   overlays: Record<string, { enabled: boolean; opacity: number }>;
+  /** Realistic day and night: city lights are drawn on the night side. */
+  lighting: boolean;
 }
 
 const MAX_TILE_RETRIES = 3;
@@ -93,26 +105,29 @@ export class ImageryManager {
 
   sync(state: ImageryState): void {
     this.lastState = state;
-    const wanted: { def: ImageryLayerDefinition; opacity: number }[] = [];
+    const wanted: { id: string; def: ImageryLayerDefinition; opacity: number }[] = [];
     const base =
       IMAGERY_LAYERS.find((l) => l.providerId === state.baseLayer && l.role === 'base') ??
       IMAGERY_LAYERS[0]!;
-    wanted.push({ def: base, opacity: state.baseOpacity });
+    wanted.push({ id: base.providerId, def: base, opacity: state.baseOpacity });
+    if (state.lighting && base.providerId !== NIGHT_LIGHTS_SOURCE)
+      wanted.push({ id: NIGHT_LIGHTS, def: layerDefinition(NIGHT_LIGHTS_SOURCE), opacity: 1 });
     for (const def of IMAGERY_LAYERS) {
       const o = state.overlays[def.providerId];
-      if (def.role === 'overlay' && o?.enabled) wanted.push({ def, opacity: o.opacity });
+      if (def.role === 'overlay' && o?.enabled)
+        wanted.push({ id: def.providerId, def, opacity: o.opacity });
     }
 
-    const wantedIds = new Set(wanted.map((w) => w.def.providerId));
+    const wantedIds = new Set(wanted.map((w) => w.id));
     for (const [id, a] of this.active) if (!wantedIds.has(id)) this.release(id, a);
 
     let index = 0;
-    for (const { def, opacity } of wanted) {
+    for (const { id, def, opacity } of wanted) {
       const key =
         def.kind === 'clouds'
           ? cloudFrameTimes(new Date(), CLOUD_FRAMES).join(',')
           : this.url(def, state.imageryDate);
-      let entry = this.active.get(def.providerId);
+      let entry = this.active.get(id);
       if (entry && entry.key !== key) {
         if (entry.clouds) {
           // A new hour: keep the frames still in the loop, add the newest, drop the oldest.
@@ -120,14 +135,15 @@ export class ImageryManager {
           entry.layers = entry.clouds.layers;
           entry.key = key;
         } else {
-          this.release(def.providerId, entry);
+          this.release(id, entry);
           entry = undefined;
         }
       }
-      if (!entry) entry = this.create(def, key, index);
+      if (!entry) entry = this.create(id, def, key, index);
       if (entry.clouds) this.cloudOpacity = opacity;
       else for (const layer of entry.layers) layer.alpha = opacity;
-      // Keep stacking order: base at the bottom, overlays in catalogue order.
+      // Keep stacking order: base at the bottom, then night lights, then overlays in
+      // catalogue order.
       for (const layer of entry.layers) this.moveTo(layer, index++);
     }
     this.viewer.scene.requestRender();
@@ -144,12 +160,21 @@ export class ImageryManager {
   }
 
   /**
-   * Advance the cloud loop, and roll it on to a new hour when one is published. Returns
-   * true when a render is needed.
+   * Fade the night lights for the camera height, advance the cloud loop, and roll it on to
+   * a new hour when one is published. Returns true when a render is needed.
    */
   tick(dtSeconds: number, cameraHeight: number): boolean {
+    let changed = false;
+    const night = this.active.get(NIGHT_LIGHTS)?.layers[0];
+    if (night) {
+      const alpha = nightLightsAlpha(cameraHeight);
+      if (Math.abs(alpha - night.nightAlpha) > 0.005) {
+        night.nightAlpha = alpha;
+        changed = true;
+      }
+    }
     const entry = [...this.active.values()].find((a) => a.clouds);
-    if (!entry?.clouds) return false;
+    if (!entry?.clouds) return changed;
     this.sinceHourCheck += dtSeconds;
     if (this.sinceHourCheck > 30 && this.lastState) {
       this.sinceHourCheck = 0;
@@ -158,10 +183,12 @@ export class ImageryManager {
         return true;
       }
     }
-    return entry.clouds.update(dtSeconds, this.cloudsPlaying, this.cloudOpacity, cameraHeight);
+    return (
+      entry.clouds.update(dtSeconds, this.cloudsPlaying, this.cloudOpacity, cameraHeight) || changed
+    );
   }
 
-  private create(def: ImageryLayerDefinition, key: string, index: number): Active {
+  private create(id: string, def: ImageryLayerDefinition, key: string, index: number): Active {
     const credit = new Credit(providerById(def.providerId).attribution.short, true);
     let entry: Active;
     if (def.kind === 'clouds') {
@@ -177,10 +204,15 @@ export class ImageryManager {
           ? { minimumTerrainLevel: def.minimumTerrainLevel }
           : {},
       );
+      if (id === NIGHT_LIGHTS) {
+        layer.dayAlpha = 0;
+        layer.nightAlpha = nightLightsAlpha(this.viewer.camera.positionCartographic.height);
+        layer.brightness = NIGHT_LIGHTS_BRIGHTNESS;
+      }
       this.viewer.imageryLayers.add(layer, index);
       entry = { key, layers: [layer] };
     }
-    this.active.set(def.providerId, entry);
+    this.active.set(id, entry);
     return entry;
   }
 

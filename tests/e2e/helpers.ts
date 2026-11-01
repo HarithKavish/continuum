@@ -159,3 +159,60 @@ export async function headingNearNorth(page: Page): Promise<number> {
   const c = await camera(page);
   return Math.min(c.heading, 360 - c.heading);
 }
+
+/**
+ * Where the Sun is overhead at `date`, from the Astronomical Almanac's low-precision solar
+ * coordinates (about 0.01°) and Greenwich mean sidereal time: independent of Cesium.
+ */
+export function subsolarPoint(date: Date): { lon: number; lat: number } {
+  const rad = Math.PI / 180;
+  const n = date.getTime() / 86_400_000 + 2_440_587.5 - 2_451_545.0;
+  const meanLongitude = 280.46 + 0.9856474 * n;
+  const anomaly = (357.528 + 0.9856003 * n) * rad;
+  const lambda = (meanLongitude + 1.915 * Math.sin(anomaly) + 0.02 * Math.sin(2 * anomaly)) * rad;
+  const obliquity = (23.439 - 0.0000004 * n) * rad;
+  const declination = Math.asin(Math.sin(obliquity) * Math.sin(lambda));
+  const rightAscension = Math.atan2(Math.cos(obliquity) * Math.sin(lambda), Math.cos(lambda));
+  const gmst = 280.46061837 + 360.98564736629 * n;
+  const lon = ((((rightAscension / rad - gmst) % 360) + 540) % 360) - 180;
+  return { lon, lat: declination / rad };
+}
+
+/** Mean brightness (0–255) of a square of the rendered page centred on the screen centre. */
+export async function centreBrightness(page: Page, size = 120): Promise<number> {
+  const viewport = page.viewportSize()!;
+  const png = await page.screenshot({
+    clip: {
+      x: viewport.width / 2 - size / 2,
+      y: viewport.height / 2 - size / 2,
+      width: size,
+      height: size,
+    },
+    timeout: 120_000,
+  });
+  return page.evaluate(async (b64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${b64}`;
+    await image.decode();
+    const canvas = Object.assign(document.createElement('canvas'), {
+      width: image.width,
+      height: image.height,
+    });
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(image, 0, 0);
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += (px[i]! + px[i + 1]! + px[i + 2]!) / 3;
+    return sum / (px.length / 4);
+  }, png.toString('base64'));
+}
+
+/** Wait until every visible terrain and imagery tile has loaded (or give up quietly). */
+export async function waitForTiles(page: Page, timeout = 60_000): Promise<void> {
+  await page
+    .waitForFunction(() => (window as any).continuum.engine.viewer.scene.globe.tilesLoaded, null, {
+      timeout,
+    })
+    .catch(() => undefined);
+  await page.waitForTimeout(1_000);
+}
