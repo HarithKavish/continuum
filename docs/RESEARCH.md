@@ -204,6 +204,26 @@ footprint has a height (12 of 7 365 in Kochi), so they are drawn flat. Zoom-14 t
 **Roads.** OpenFreeMap's `transportation` and `transportation_name` layers carry roads from
 motorways down to paths, with names. Kochi's zoom-14 tile has 189 named stretches.
 
+**City detail in South India.** OpenStreetMap, through the same OpenFreeMap tiles, is the
+richest open source a browser can read. Measured zoom-14 tiles:
+
+| Tile | Points of interest | House numbers | Water |
+|---|---|---|---|
+| Central Chennai (T. Nagar) | 1 486 (875 named; 448 gates) | 63 | 5 areas, 11 waterways |
+| Central Madurai | 506 (417 named) | 59 | 3 areas, 10 waterways |
+
+Coarser tiles carry the tanks and canals: a zoom-10 tile over central Tamil Nadu holds 134
+lakes, and a zoom-12 tile near Madurai 55 lakes and 38 canals. Points of interest carry a
+quarter-tile buffer, enough for labels to agree across tile edges from zoom 15 in.
+
+Indian government services were checked and are not usable here:
+- ISRO Bhuvan's WMS and tile cache send no CORS headers.
+- Bharatmaps' certificate chain does not verify against the Mozilla root store.
+- TN-GIS puts its layers and Web API services behind a login.
+
+Overture's places theme reads in a browser, but its tiles are heavy: 4.3 MB over central
+Chennai and 3.1 MB over Madurai.
+
 **Clouds.** No single open, browser-accessible source covers the globe in near real time:
 - NASA GIBS serves GOES-East, GOES-West and Himawari Band 13 every 10 minutes, but not Meteosat.
 - EUMETSAT's EUMETView WMS serves Meteosat 0° and Meteosat Indian Ocean IR 10.8 µm every

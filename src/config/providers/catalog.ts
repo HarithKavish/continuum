@@ -364,21 +364,24 @@ export const PROVIDERS: ProviderMetadata[] = [
     ...openFreeMapCommon,
     id: 'openfreemap-places',
     capabilities: ['vector-tiles'],
-    name: 'Place names (OpenFreeMap)',
+    name: 'Place names and points of interest (OpenFreeMap)',
     category: 'geography',
-    dataset: 'OpenMapTiles "place" layer, planet extract',
+    dataset:
+      'OpenMapTiles "place", "poi", "mountain_peak", "aerodrome_label" and "housenumber" layers, planet extract',
     description:
-      'Country, state, city, town, village and neighbourhood names, chosen for each zoom and decluttered.',
-    documentationUrl: 'https://openmaptiles.org/schema/#place',
+      'Country, state, city, town, village and neighbourhood names; airports and peaks (with height) from regional views; stations, hospitals, places of worship, schools, civic buildings, parks and shops close up; house numbers at street level. All chosen for each zoom and decluttered together.',
+    documentationUrl: 'https://openmaptiles.org/schema/#poi',
     coverage: {
       extent: 'global',
       description:
-        'Places as mapped in OpenStreetMap; the tiles add smaller places as zoom increases (neighbourhoods at zoom 14).',
+        'As mapped in OpenStreetMap. Points of interest are in the zoom-14 tiles, so they appear from about 1:30 000: a central Chennai tile holds 1 486 points (875 named) and 63 house numbers, a central Madurai tile 506 points (checked 2026-11-01).',
     },
     resolution:
       'Point positions quantised to 4096 units per tile at each zoom (~0.6 m at the equator at zoom 14).',
     limitations: [
       'English names (name:en) where mapped, otherwise the local name.',
+      'Gates, entrances, toilets, shelters, ATMs, parking and bus stops are left out: they outnumber everything else in a city (448 of the 1 486 points in the Chennai tile were gates).',
+      'House numbers are sparse where OpenStreetMap has few addresses, which includes most of India.',
       'Labels are drawn into imagery tiles: they are not searchable or selectable, and a name can be cut where tiles of different zoom meet.',
     ],
   },
@@ -584,6 +587,28 @@ export const PROVIDERS: ProviderMetadata[] = [
       'Not for navigation (GEBCO terms of use).',
     ],
     status: 'integrated',
+  },
+  {
+    ...openFreeMapCommon,
+    id: 'openfreemap-water',
+    capabilities: ['vector-tiles'],
+    name: 'Lakes, rivers and canals (OpenFreeMap)',
+    category: 'hydrology',
+    dataset: 'OpenMapTiles "water", "waterway" and "water_name" layers, planet extract',
+    description:
+      'Lakes, reservoirs and tanks, rivers, canals, streams and drains, with their names, drawn for each zoom over the imagery. Seasonal (intermittent) water is drawn lighter and dashed.',
+    documentationUrl: 'https://openmaptiles.org/schema/#water',
+    coverage: {
+      extent: 'global',
+      description:
+        'As mapped in OpenStreetMap; small water bodies are added as zoom increases. A zoom-10 tile over central Tamil Nadu holds 134 lakes and tanks; a zoom-12 tile near Madurai 55 lakes and 38 canals (checked 2026-11-01). The open sea is left to the imagery.',
+    },
+    resolution:
+      'Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0.6 m at the equator), drawn larger beyond it.',
+    limitations: [
+      'Outlines are as mapped in OpenStreetMap, not the water present today: a tank mapped at its full extent is drawn so in the dry season.',
+      'Line widths are a display choice by class and zoom, not the river width.',
+    ],
   },
   {
     ...openFreeMapCommon,

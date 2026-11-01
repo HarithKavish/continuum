@@ -20,7 +20,7 @@ export interface ImageryLayerDefinition {
   /** URL template; {date} is substituted with the selected UTC date (YYYY-MM-DD). */
   url: string;
   /** For kind 'vector': what VectorOverlayProvider draws. */
-  vectorStyle?: 'boundaries' | 'places' | 'roads' | 'buildings';
+  vectorStyle?: 'boundaries' | 'places' | 'roads' | 'water' | 'buildings';
   /** Where the provider has data, [west, south, east, north] degrees; nothing is requested outside. */
   bounds?: [number, number, number, number];
   /** Shown only on terrain tiles at least this deep (so close-up layers load only close up). */
@@ -233,6 +233,20 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
     hint: 'The last four hours, hour by hour, from five geostationary satellites. Fades out as you zoom in.',
   },
   {
+    providerId: 'openfreemap-water',
+    role: 'overlay',
+    label: 'Lakes, rivers and canals',
+    group: 'Geographic features',
+    kind: 'vector',
+    vectorStyle: 'water',
+    url: 'https://tiles.openfreemap.org/planet',
+    tiling: 'mercator',
+    maximumLevel: 19,
+    dated: false,
+    defaultOpacity: 1,
+    hint: 'Lakes and tanks (seasonal ones dashed), rivers, canals and drains, with their names.',
+  },
+  {
     providerId: 'overture-buildings',
     role: 'overlay',
     label: 'Buildings',
@@ -290,7 +304,7 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
   {
     providerId: 'openfreemap-places',
     role: 'overlay',
-    label: 'Place names',
+    label: 'Place names and points of interest',
     group: 'Geographic features',
     kind: 'vector',
     vectorStyle: 'places',
@@ -299,7 +313,7 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
     maximumLevel: 19,
     dated: false,
     defaultOpacity: 1,
-    hint: 'Fewer, larger places from afar; towns, villages and neighbourhoods as you zoom in.',
+    hint: 'Fewer, larger places from afar; towns and neighbourhoods, then stations, hospitals, temples, schools and shops as you zoom in.',
   },
 ];
 
@@ -339,6 +353,7 @@ export const DEFAULT_OVERLAYS = [
   'swisstopo-swissimage',
   'basemap-at-orthofoto',
   'geostationary-clouds',
+  'openfreemap-water',
   'overture-buildings',
   'openfreemap-roads',
   'openfreemap-boundaries',

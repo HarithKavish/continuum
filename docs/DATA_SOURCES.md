@@ -57,13 +57,14 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | [Black Marble night lights (2016)](#gibs-black-marble) | imagery | global | 500 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [USGS National Map orthoimagery](#usgs-imagery) | imagery | regional | Up to ~1 m (NAIP) in the US | none | verified 2026-11-01 | Public domain (U.S. Government work) | integrated |
 | [Administrative borders (OpenFreeMap)](#openfreemap-boundaries) | geography | global | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
-| [Place names (OpenFreeMap)](#openfreemap-places) | geography | global | Point positions quantised to 4096 units per tile at each zoom (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
+| [Place names and points of interest (OpenFreeMap)](#openfreemap-places) | geography | global | Point positions quantised to 4096 units per tile at each zoom (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
 | [Coastlines](#gibs-coastlines) | geography | global | Rendered to zoom 13 | none | verified 2026-11-01 | ODbL (OpenStreetMap data); NASA rendering | integrated |
 | [Dynamic surface water (OPERA DSWx-HLS)](#gibs-surface-water) | hydrology | global | 30 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [Flood (VIIRS, 1-day)](#gibs-flood) | hydrology | global | 375 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [Precipitation rate (IMERG)](#gibs-precipitation) | weather | global | 0 | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [Sea surface temperature (GHRSST MUR)](#gibs-sst) | bathymetry | global | 0 | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [GEBCO 2026 bathymetry](#gebco-2026) | bathymetry | global | 15 arc-seconds (~460 m at the equator) grid; much of the seafloor is interpolated between sparse soundings | none | verified 2026-11-01 | Public domain (GEBCO Grid terms of use); attribution required | integrated |
+| [Lakes, rivers and canals (OpenFreeMap)](#openfreemap-water) | hydrology | global | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
 | [Roads and railways (OpenFreeMap)](#openfreemap-roads) | geography | global | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
 | [Building footprints (Overture Maps)](#overture-buildings) | buildings | global | Vector geometry quantised to the zoom-14 tile grid (4096 units per tile, ~0 | none | verified 2026-11-01 | ODbL (theme); CC BY 4.0 for Google Open Buildings and Esri Community Maps contributions | integrated |
 | [Live clouds (geostationary infrared)](#geostationary-clouds) | weather | global | Infrared imagery of about 2–3 km at the sub-satellite point, coarser towards the edge of each view | none | verified 2026-11-01 | EUMETSAT data policy; NASA open data | integrated |
@@ -312,21 +313,21 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | Limitations | Borders are as mapped in OpenStreetMap; disputed borders (flagged in the data) are drawn dashed. Maritime limits are not drawn. OpenStreetMap documents no positional accuracy for boundaries, so none is shown. Drawn into imagery tiles on the terrain: lines foreshorten when the view is tilted. |
 | Status | integrated |
 
-### Place names (OpenFreeMap)
+### Place names and points of interest (OpenFreeMap)
 
 <a id="openfreemap-places"></a>
 
 | | |
 |---|---|
 | Provider | OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data |
-| Dataset | OpenMapTiles "place" layer, planet extract |
-| Description | Country, state, city, town, village and neighbourhood names, chosen for each zoom and decluttered. |
-| Documentation | https://openmaptiles.org/schema/#place |
+| Dataset | OpenMapTiles "place", "poi", "mountain_peak", "aerodrome_label" and "housenumber" layers, planet extract |
+| Description | Country, state, city, town, village and neighbourhood names; airports and peaks (with height) from regional views; stations, hospitals, places of worship, schools, civic buildings, parks and shops close up; house numbers at street level. All chosen for each zoom and decluttered together. |
+| Documentation | https://openmaptiles.org/schema/#poi |
 | Endpoint | `https://tiles.openfreemap.org/planet` (mvt; Mapbox Vector Tiles via TileJSON) |
 | Capabilities | vector-tiles |
 | Authentication | None |
 | CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
-| Coverage | Places as mapped in OpenStreetMap; the tiles add smaller places as zoom increases (neighbourhoods at zoom 14). |
+| Coverage | As mapped in OpenStreetMap. Points of interest are in the zoom-14 tiles, so they appear from about 1:30 000: a central Chennai tile holds 1 486 points (875 named) and 63 house numbers, a central Madurai tile 506 points (checked 2026-11-01). |
 | Resolution | Point positions quantised to 4096 units per tile at each zoom (~0.6 m at the equator at zoom 14). |
 | Horizontal accuracy | Not stated by the provider |
 | Vertical accuracy | Not stated by the provider |
@@ -338,7 +339,7 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | Caching | Cache-Control on tiles from the provider; TileJSON max-age=3600. |
 | Licence | [ODbL (data); OpenMapTiles schema (BSD/CC-BY)](https://www.openstreetmap.org/copyright) |
 | Attribution | OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL). |
-| Limitations | English names (name:en) where mapped, otherwise the local name. Labels are drawn into imagery tiles: they are not searchable or selectable, and a name can be cut where tiles of different zoom meet. |
+| Limitations | English names (name:en) where mapped, otherwise the local name. Gates, entrances, toilets, shelters, ATMs, parking and bus stops are left out: they outnumber everything else in a city (448 of the 1 486 points in the Chennai tile were gates). House numbers are sparse where OpenStreetMap has few addresses, which includes most of India. Labels are drawn into imagery tiles: they are not searchable or selectable, and a name can be cut where tiles of different zoom meet. |
 | Status | integrated |
 
 ### Coastlines
@@ -513,6 +514,35 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | Licence | [Public domain (GEBCO Grid terms of use); attribution required](https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use) — Not to be used for navigation or safety at sea; must not imply GEBCO, IHO or IOC endorsement. |
 | Attribution | GEBCO Bathymetric Compilation Group 2026 (2026). The GEBCO_2026 Grid — a continuous terrain model for oceans and land at 15 arc-second intervals. NERC EDS British Oceanographic Data Centre NOC. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa |
 | Limitations | Imagery only: the WMS does not return depth values (GetFeatureInfo returns no results), so it is never used as a terrain mesh. Interpolated cells are visually indistinguishable from measured ones in this layer. Not for navigation (GEBCO terms of use). |
+| Status | integrated |
+
+### Lakes, rivers and canals (OpenFreeMap)
+
+<a id="openfreemap-water"></a>
+
+| | |
+|---|---|
+| Provider | OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data |
+| Dataset | OpenMapTiles "water", "waterway" and "water_name" layers, planet extract |
+| Description | Lakes, reservoirs and tanks, rivers, canals, streams and drains, with their names, drawn for each zoom over the imagery. Seasonal (intermittent) water is drawn lighter and dashed. |
+| Documentation | https://openmaptiles.org/schema/#water |
+| Endpoint | `https://tiles.openfreemap.org/planet` (mvt; Mapbox Vector Tiles via TileJSON) |
+| Capabilities | vector-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | As mapped in OpenStreetMap; small water bodies are added as zoom increases. A zoom-10 tile over central Tamil Nadu holds 134 lakes and tanks; a zoom-12 tile near Madurai 55 lakes and 38 canals (checked 2026-11-01). The open sea is left to the imagery. |
+| Resolution | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0.6 m at the equator), drawn larger beyond it. |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Planet rebuilt regularly; the active build date is reported in the TileJSON URL. |
+| Rate limits | No limits on map views; please keep request volume reasonable. |
+| Caching | Cache-Control on tiles from the provider; TileJSON max-age=3600. |
+| Licence | [ODbL (data); OpenMapTiles schema (BSD/CC-BY)](https://www.openstreetmap.org/copyright) |
+| Attribution | OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL). |
+| Limitations | Outlines are as mapped in OpenStreetMap, not the water present today: a tank mapped at its full extent is drawn so in the dry season. Line widths are a display choice by class and zoom, not the river width. |
 | Status | integrated |
 
 ### Roads and railways (OpenFreeMap)
@@ -954,6 +984,10 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 
 | Source | Reason |
 |---|---|
+| ISRO Bhuvan WMS and tile cache (India) | Both answer (bhuvan-vec1 WMS, bhuvan-ras2 tile cache) but send no CORS headers (checked 2026-11-01), so a browser on another site cannot read them. OpenStreetMap data covers the same roads, water and places. |
+| Bharatmaps (NIC, India) | Its certificate chain did not verify against the Mozilla root store (SELF_SIGNED_CERT_IN_CHAIN, checked 2026-11-01); not evaluated further. |
+| TN-GIS (Tamil Nadu e-Governance Agency) | Its layers and Web API services sit behind an official or public account login, and its map viewer asks for GeoServer credentials (checked 2026-11-01). |
+| Overture Maps places | Browser-accessible and CDLA-Permissive-2.0, but heavy where it is densest: a zoom-14 tile over central Chennai is 4.3 MB (5 356 places), over Madurai 3.1 MB (3 857) (checked 2026-11-01). Points of interest come from OpenStreetMap instead, at about a tenth of the size. |
 | Copernicus DEM GLO-30 / GLO-90 (direct) | Copernicus Data Space downloads need registration. The public AWS copies (copernicus-dem-30m) send no CORS headers, so a browser cannot read them. GLO-90 point values are available through Open-Meteo instead. |
 | Cesium World Terrain, Cesium OSM Buildings, Bing imagery (Cesium ion) | Require a Cesium ion access token. |
 | OpenSky Network aircraft states | Anonymous REST access works, but the API only allows its own origin (CORS), so browsers elsewhere are refused. |
