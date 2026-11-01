@@ -316,6 +316,7 @@ export class Engine {
     // The live cloud loop: it renders only while frames change, and holds the newest frame
     // in low-power mode.
     this.imagery.cloudsPlaying = layersStore.get().cloudsPlaying && !statusStore.get().lowPower;
+    this.imagery.cloudShadows = layersStore.get().lighting;
     if (this.imagery.tick(dt, this.viewer.camera.positionCartographic.height))
       this.viewer.scene.requestRender();
     const cloudTime = this.imagery.cloudTime();

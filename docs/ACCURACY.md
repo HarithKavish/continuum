@@ -126,6 +126,17 @@ disagree for real reasons:
 | USGS 3DEP (EPQS) | DTM — bare earth | NAVD88 | United States |
 | NOAA NCEI DEM mosaic | Topography–bathymetry | Not reported per point | Global |
 
+## Cloud shadows
+
+The satellites measure cloud-top brightness temperature, not height. Shadows place each
+cloud top with the International Standard Atmosphere: 15 °C at sea level, cooling 6.5 K per
+km. That puts the faintest drawn cloud (0 °C) at 2.3 km and opaque cloud (−40 °C or colder)
+at 8.5 km or more. Real profiles differ by place, season and weather. The Sun's position at
+each frame's hour comes from the Astronomical Almanac's low-precision formulae (about 0.01°).
+Shadows are drawn only with the Sun more than 3° up and up to 150 km long. Their darkness
+(55% under opaque cloud) is a display choice: the cloud-free imagery underneath has no
+shadows of its own.
+
 ## Events
 
 - **Earthquakes**: epicentres to three decimals (~110 m) as display precision; actual

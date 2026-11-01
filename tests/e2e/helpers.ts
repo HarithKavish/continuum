@@ -132,14 +132,19 @@ export async function padButton(page: Page, index: number, value: number) {
   );
 }
 
-/** Wait until the engine's input loop has sampled the controller `count` more times. */
+/**
+ * Wait until the engine's input loop has sampled the controller `count` more times. Under
+ * the software renderer CI uses, a frame that is still uploading tiles can hold the loop for
+ * many seconds (a 30 s wait timed out once on runway, 2026-11-01, and passed on rerun), so
+ * this allows as long as the other loading waits.
+ */
 export async function waitInputFrames(page: Page, count = 2) {
   const start = await page.evaluate(() => (window as any).continuum.engine.inputFrames as number);
   await page.waitForFunction(
     (target) => (window as any).continuum.engine.inputFrames >= target,
     start + count,
     {
-      timeout: 30_000,
+      timeout: 90_000,
     },
   );
 }

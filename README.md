@@ -38,7 +38,8 @@ scripts.
   numbers; building footprints from Overture Maps (OpenStreetMap with Google and Microsoft
   machine-detected buildings).
 - **Live clouds**: infrared from five geostationary satellites (EUMETSAT Meteosat, NASA GIBS
-  GOES and Himawari), looping the last four hours.
+  GOES and Himawari), looping the last four hours, casting shadows where the Sun was at
+  each hour from cloud tops placed by their temperature.
 - **Day and night**: the globe is lit from where the Sun is right now, at every distance, with
   NASA Black Marble city lights on the night side; one button (or L) switches to full
   daylight.

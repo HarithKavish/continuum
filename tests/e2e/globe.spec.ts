@@ -138,6 +138,27 @@ test.describe('globe, data and architecture', () => {
     // Whole hours only: EUMETSAT's hourly imagery is the licence-free real-time cadence.
     for (const t of times) expect(t).toMatch(/T\d\d:00:00Z$/);
     for (const url of urls.eumetsat) expect(url).toMatch(/time=\d{4}-\d\d-\d\dT\d\d:00:00Z/);
+    // Under realistic lighting every frame casts shadows, on a layer beneath all the clouds.
+    const shadows = await page.evaluate(() => {
+      const entry = [...(window as any).continuum.engine.imagery.active.values()].find(
+        (a: any) => a.clouds,
+      );
+      return {
+        frames: entry.clouds.frames.filter((f: any) => f.shadow.show).length,
+        lowestCloud: Math.min(
+          ...entry.clouds.frames.map((f: any) =>
+            (window as any).continuum.engine.viewer.imageryLayers.indexOf(f.layer),
+          ),
+        ),
+        highestShadow: Math.max(
+          ...entry.clouds.frames.map((f: any) =>
+            (window as any).continuum.engine.viewer.imageryLayers.indexOf(f.shadow),
+          ),
+        ),
+      };
+    });
+    expect(shadows.frames).toBe(5);
+    expect(shadows.highestShadow).toBeLessThan(shadows.lowestCloud);
     // Clouds fade out near the ground, so they never hide streets and houses.
     await setView(page, 76.28, 9.97, 20_000);
     await expect

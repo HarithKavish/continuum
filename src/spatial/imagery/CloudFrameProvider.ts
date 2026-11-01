@@ -15,14 +15,14 @@ import {
   type CloudSource,
 } from './cloudImagery';
 
-const TILE = 256;
+export const TILE = 256;
 /** Satellite infrared is ~2 km per pixel at best; deeper tiles would only magnify it. */
 export const CLOUD_MAX_LEVEL = 5;
 /**
  * EUMETView renders every request on demand and took 1–15 s per 256-pixel tile (measured
  * 2026-11-01), so Meteosat is requested no deeper than this and resampled beyond it.
  */
-const EUMETSAT_MAX_LEVEL = 3;
+export const EUMETSAT_MAX_LEVEL = 3;
 const MERCATOR_HALF = 20037508.342789244;
 
 // Per host, so slow EUMETView requests never hold up GIBS.
@@ -31,7 +31,13 @@ const queues = {
   eumetsat: new RequestQueue('clouds-eumetsat', 6),
 };
 
-function sourceUrl(source: CloudSource, time: string, x: number, y: number, z: number): string {
+export function sourceUrl(
+  source: CloudSource,
+  time: string,
+  x: number,
+  y: number,
+  z: number,
+): string {
   if (source.kind === 'gibs')
     return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${source.layer}/default/${time}/GoogleMapsCompatible_Level6/${z}/${y}/${x}.png`;
   const size = (2 * MERCATOR_HALF) / 2 ** z;
@@ -46,7 +52,7 @@ function sourceUrl(source: CloudSource, time: string, x: number, y: number, z: n
 const cache = new LruCache<Uint8Array>(400);
 
 /** A source tile decoded to cloud opacity (0–255) per pixel, or null where it has none. */
-async function sourceOpacity(
+export async function sourceOpacity(
   source: CloudSource,
   url: string,
   priority: number,
