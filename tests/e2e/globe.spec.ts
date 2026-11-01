@@ -62,6 +62,69 @@ test.describe('globe, data and architecture', () => {
     await expect(page.locator('.credits')).toContainText('OpenStreetMap');
   });
 
+  test('adds aerial photos, building footprints and roads close up', async ({ page }) => {
+    const hits = { aerial: 0, footprints: 0, roads: 0 };
+    page.on('response', (r) => {
+      const url = r.url();
+      if (!r.ok()) return;
+      if (url.includes('data.geopf.fr/wmts')) hits.aerial++;
+      // Overture's archive is read in byte ranges, never downloaded whole.
+      if (url.includes('overturemaps-extras') && r.status() === 206) hits.footprints++;
+      if (/tiles\.openfreemap\.org\/planet\/[^/]+\/14\//.test(url)) hits.roads++;
+    });
+    await page.goto('/');
+    await waitForEngine(page);
+    await setView(page, 2.2945, 48.8584, 1_500); // the Champ de Mars, Paris
+    await expect.poll(() => hits.aerial, { timeout: 90_000 }).toBeGreaterThan(0);
+    await expect.poll(() => hits.footprints, { timeout: 90_000 }).toBeGreaterThan(0);
+    await expect.poll(() => hits.roads, { timeout: 90_000 }).toBeGreaterThan(0);
+    await expect(page.locator('.credits')).toContainText('IGN');
+    await expect(page.locator('.credits')).toContainText('Overture');
+  });
+
+  test('loops live clouds from EUMETSAT and NASA GIBS, hour by hour', async ({ page }) => {
+    const urls = { eumetsat: [] as string[], gibs: 0 };
+    page.on('response', (r) => {
+      if (!r.ok()) return;
+      if (r.url().includes('view.eumetsat.int/geoserver/wms')) urls.eumetsat.push(r.url());
+      if (r.url().includes('Band13_Clean_Infrared')) urls.gibs++;
+    });
+    await page.addInitScript(() =>
+      localStorage.setItem(
+        'continuum.preferences.v1',
+        JSON.stringify({ overlays: ['geostationary-clouds'] }),
+      ),
+    );
+    await page.goto('/');
+    await waitForEngine(page);
+    // India and the Indian Ocean: Meteosat Indian Ocean to the west, Himawari to the east.
+    await setView(page, 85, 15, 9_000_000);
+    await expect.poll(() => urls.eumetsat.length, { timeout: 90_000 }).toBeGreaterThan(0);
+    await expect.poll(() => urls.gibs, { timeout: 90_000 }).toBeGreaterThan(0);
+    const frames = () =>
+      page.evaluate((): { time: string; alpha: number; show: boolean }[] =>
+        [...(window as any).continuum.engine.imagery.active.values()]
+          .find((a: any) => a.clouds)
+          .clouds.frames.map((f: any) => ({
+            time: f.time,
+            alpha: f.layer.alpha,
+            show: f.layer.show,
+          })),
+      );
+    const times = (await frames()).map((f) => f.time);
+    expect(times).toHaveLength(5);
+    // Whole hours only: EUMETSAT's hourly imagery is the licence-free real-time cadence.
+    for (const t of times) expect(t).toMatch(/T\d\d:00:00Z$/);
+    for (const url of urls.eumetsat) expect(url).toMatch(/time=\d{4}-\d\d-\d\dT\d\d:00:00Z/);
+    // Clouds fade out near the ground, so they never hide streets and houses.
+    await setView(page, 76.28, 9.97, 20_000);
+    await expect
+      .poll(async () => (await frames()).every((f) => !f.show || f.alpha === 0), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+  });
+
   test('loads USGS earthquakes and NASA EONET events into normalised records', async ({ page }) => {
     await page.goto('/');
     await waitForEngine(page);

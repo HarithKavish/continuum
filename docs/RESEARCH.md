@@ -190,6 +190,64 @@ and borders stay coarse. Borders and place names now come from OpenFreeMap vecto
 - **Rejected for browser use:** OpenTopoData (no CORS headers), OpenSky (CORS restricted to
   its own origin), NASA FIRMS API (MAP_KEY), Stadia/MapTiler/Thunderforest (keys).
 
+### Detail and live clouds (measured 2026-11-01)
+
+**Buildings.** OpenStreetMap barely covers houses in much of India. The zoom-14 tile over
+central Kochi holds 37 buildings in OpenFreeMap and a rural Kottayam tile 1. Overture's
+buildings theme conflates OSM with Google Open Buildings and Microsoft footprints, and the
+same tiles hold 7 365 and 3 858. Overture publishes a PMTiles archive per release that
+answers browser range requests (CORS `*`, `Access-Control-Allow-Headers: range`). The
+latest release is named in its STAC catalogue, and only the last few are kept. Almost no
+footprint has a height (12 of 7 365 in Kochi), so they are drawn flat. Zoom-14 tiles reach
+~2 MB in dense areas.
+
+**Roads.** OpenFreeMap's `transportation` and `transportation_name` layers carry roads from
+motorways down to paths, with names. Kochi's zoom-14 tile has 189 named stretches.
+
+**Clouds.** No single open, browser-accessible source covers the globe in near real time:
+- NASA GIBS serves GOES-East, GOES-West and Himawari Band 13 every 10 minutes, but not Meteosat.
+- EUMETSAT's EUMETView WMS serves Meteosat 0° and Meteosat Indian Ocean IR 10.8 µm every
+  15 minutes (CORS `*`). Its "Geostationary Ring" mosaic is only 3-hourly.
+- RainViewer's feed has no satellite frames any more.
+
+Continuum stitches the five satellites by longitude, each drawing the longitudes nearest
+its sub-satellite point. EUMETSAT's data policy makes hourly imagery licence-free in real
+time and 15-minute imagery free only after three hours, so frames are hourly.
+
+Cloud opacity comes from infrared brightness temperature. GIBS colours decode exactly
+through its published colour map. A quarter of a zoom-3 tile's colours are resampled
+blends not in the map; those take the nearest class. EUMETView publishes greyscale with no
+scale, so it was fitted against Himawari over the Bay of Bengal (67 424 paired pixels):
+grey ≈ 70 − 3.2 × T °C.
+
+A clear-sky threshold of +10 °C turned cold November land at 41–66°N into haze, so clear
+is 0 °C and opaque −40 °C.
+
+EUMETView renders every request on demand. It took 1–15 s per 256-pixel tile for Meteosat
+Indian Ocean and ~22 s for Meteosat 0°. Larger images cost proportionally more: 39 s for
+1024×1536 pixels, and an error at 2048×2048. So Meteosat is requested to zoom 3 only, the
+newest frame first, and decoded tiles are reused for every deeper tile and frame.
+
+**Aerial photography.** National orthophoto services that answer browsers with CORS `*`
+(deepest zoom in brackets): IGN France (19), PDOK Netherlands (21), swisstopo (20),
+basemap.at (20), GSI Japan, and IGN Spain PNOA. Outside their coverage:
+
+| Service | Returns outside coverage |
+|---|---|
+| IGN France, PDOK | Pure white tiles; drawn as no data |
+| basemap.at | 404 |
+| swisstopo | Imagery a little beyond the border |
+| IGN Spain PNOA | A low-detail fill (31 colours in a whole zoom-16 tile over Lisbon); not integrated |
+
+GSI's terms may require an approval application when a map is a site's main content.
+
+**Terrain seam (fixed).** Close-up views over France showed a thin white line running
+north–south. It lay on a Mercator source-tile boundary (6.0645°E is the zoom-12 boundary
+x = 2117). Samples exactly on a source-tile edge could round into the neighbouring tile,
+which had not been requested, and read 0 m. That cut a trench along the edge, through which
+the sky showed. The same line was on the live site. Edge samples now use the requested tile
+that holds the edge.
+
 ## 6. Rendering engine
 
 | | CesiumJS | MapLibre GL JS | Three.js |

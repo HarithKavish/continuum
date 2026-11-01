@@ -45,8 +45,8 @@ Article 10. Each states what it deviates from, why, and what would end it.
 3. **Local data-encoding colours** (`src/spatial/rendering/palettes.ts`, the flood
    legend colours copied from the GIBS colour map) and literal colours for
    elements drawn over imagery or space: the black scene background, the white crosshair,
-   and the border and place-name colours drawn into imagery tiles
-   (`src/spatial/imagery/vectorStyle.ts`).
+   the border, place-name, road and building colours drawn into imagery tiles
+   (`src/spatial/imagery/vectorStyle.ts`), and the white of the live clouds.
    *Why:* these encode measured quantities or must stay legible over arbitrary imagery in
    both themes; the design system has no data-visualisation palette or over-imagery tokens.
    Interface chrome uses the shared tokens only.

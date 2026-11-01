@@ -85,6 +85,14 @@ per-tile mask and the inspector says what happened at the selected point.
 Slope is not computed at a point whose value came from a coarser tile (it would mix two
 resolutions).
 
+**Fixed 2026-11-01: source-tile edges.** Rendered terrain tiles are resampled from Web
+Mercator source tiles. A sample exactly on a source-tile edge could round into the
+neighbouring tile, which had not been requested, and was then given 0 m. That lowered the
+whole edge, cutting a narrow trench in the rendered surface: a white north–south line in
+close-up views (seen over France). The point inspector and elevation profile read source
+tiles directly and were not affected. Edge samples now use the requested tile that holds
+that edge.
+
 ## Coverage limits
 
 - **Polar caps beyond ±85.05°** have no Terrain Tiles data (Web Mercator). For rendering,
