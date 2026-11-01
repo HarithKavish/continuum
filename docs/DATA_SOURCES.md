@@ -56,8 +56,8 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | [Blue Marble shaded relief and bathymetry](#gibs-blue-marble) | imagery | global | 500 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [Black Marble night lights (2016)](#gibs-black-marble) | imagery | global | 500 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [USGS National Map orthoimagery](#usgs-imagery) | imagery | regional | Up to ~1 m (NAIP) in the US | none | verified 2026-11-01 | Public domain (U.S. Government work) | integrated |
-| [Place labels](#gibs-reference-labels) | geography | global | Rendered to zoom 9 (~300 m pixels); labels stay legible but do not sharpen beyond it | none | verified 2026-11-01 | ODbL (OpenStreetMap data); NASA rendering | integrated |
-| [Roads and boundaries](#gibs-reference-features) | geography | global | Rendered to zoom 9 (~300 m pixels) | none | verified 2026-11-01 | ODbL (OpenStreetMap data); NASA rendering | integrated |
+| [Administrative borders (OpenFreeMap)](#openfreemap-boundaries) | geography | global | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
+| [Place names (OpenFreeMap)](#openfreemap-places) | geography | global | Point positions quantised to 4096 units per tile at each zoom (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
 | [Coastlines](#gibs-coastlines) | geography | global | Rendered to zoom 13 | none | verified 2026-11-01 | ODbL (OpenStreetMap data); NASA rendering | integrated |
 | [Dynamic surface water (OPERA DSWx-HLS)](#gibs-surface-water) | hydrology | global | 30 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [Flood (VIIRS, 1-day)](#gibs-flood) | hydrology | global | 375 m | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
@@ -276,62 +276,62 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | Limitations | Only meaningful inside the United States. |
 | Status | integrated |
 
-### Place labels
+### Administrative borders (OpenFreeMap)
 
-<a id="gibs-reference-labels"></a>
+<a id="openfreemap-boundaries"></a>
 
 | | |
 |---|---|
-| Provider | NASA ESDIS — Global Imagery Browse Services (GIBS) |
-| Dataset | Reference_Labels |
-| Description | Transparent place-name labels rendered by GIBS from OpenStreetMap data. |
-| Documentation | https://nasa-gibs.github.io/gibs-api-docs/ |
-| Endpoint | `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png` (wmts-rest; PNG overlay, EPSG:3857) |
-| Capabilities | imagery-tiles |
+| Provider | OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data |
+| Dataset | OpenMapTiles "boundary" layer, planet extract |
+| Description | Country, state and district borders from OpenStreetMap, drawn sharp at every zoom over the imagery. |
+| Documentation | https://openmaptiles.org/schema/#boundary |
+| Endpoint | `https://tiles.openfreemap.org/planet` (mvt; Mapbox Vector Tiles via TileJSON) |
+| Capabilities | vector-tiles |
 | Authentication | None |
 | CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
-| Coverage | Global. |
-| Resolution | Rendered to zoom 9 (~300 m pixels); labels stay legible but do not sharpen beyond it. |
+| Coverage | Countries (admin_level 2) everywhere; states (3–4) and districts with their subdivisions (5–6, meaning varies by country) where each zoom’s tiles carry them. Over Kerala, districts are absent at zoom 8 and present at zoom 10. |
+| Resolution | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0.6 m at the equator), drawn larger beyond it. |
 | Horizontal accuracy | Not stated by the provider |
 | Vertical accuracy | Not stated by the provider |
 | Accuracy reference | — |
 | Vertical datum | Not applicable |
 | Surface model | Not applicable |
-| Updates | static: Static rendering of OpenStreetMap data. |
-| Rate limits | None published. Continuum caps concurrent requests per host. |
-| Caching | Static tiles. |
-| Licence | [ODbL (OpenStreetMap data); NASA rendering](https://www.openstreetmap.org/copyright) |
-| Attribution | Labels © OpenStreetMap contributors (ODbL), rendered by NASA GIBS. |
-| Limitations | Raster labels: not searchable or selectable. The 15 m variant (Reference_Labels_15m) was rejected: in testing it returned fully opaque black tiles and frequent HTTP 500s. |
+| Updates | periodic: Planet rebuilt regularly; the active build date is reported in the TileJSON URL. |
+| Rate limits | No limits on map views; please keep request volume reasonable. |
+| Caching | Cache-Control on tiles from the provider; TileJSON max-age=3600. |
+| Licence | [ODbL (data); OpenMapTiles schema (BSD/CC-BY)](https://www.openstreetmap.org/copyright) |
+| Attribution | OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL). |
+| Limitations | Borders are as mapped in OpenStreetMap; disputed borders (flagged in the data) are drawn dashed. Maritime limits are not drawn. OpenStreetMap documents no positional accuracy for boundaries, so none is shown. Drawn into imagery tiles on the terrain: lines foreshorten when the view is tilted. |
 | Status | integrated |
 
-### Roads and boundaries
+### Place names (OpenFreeMap)
 
-<a id="gibs-reference-features"></a>
+<a id="openfreemap-places"></a>
 
 | | |
 |---|---|
-| Provider | NASA ESDIS — Global Imagery Browse Services (GIBS) |
-| Dataset | Reference_Features |
-| Description | Transparent roads, borders and features rendered by GIBS from OpenStreetMap data. |
-| Documentation | https://nasa-gibs.github.io/gibs-api-docs/ |
-| Endpoint | `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Features/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png` (wmts-rest; PNG overlay, EPSG:3857) |
-| Capabilities | imagery-tiles |
+| Provider | OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data |
+| Dataset | OpenMapTiles "place" layer, planet extract |
+| Description | Country, state, city, town, village and neighbourhood names, chosen for each zoom and decluttered. |
+| Documentation | https://openmaptiles.org/schema/#place |
+| Endpoint | `https://tiles.openfreemap.org/planet` (mvt; Mapbox Vector Tiles via TileJSON) |
+| Capabilities | vector-tiles |
 | Authentication | None |
 | CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
-| Coverage | Global. |
-| Resolution | Rendered to zoom 9 (~300 m pixels). |
+| Coverage | Places as mapped in OpenStreetMap; the tiles add smaller places as zoom increases (neighbourhoods at zoom 14). |
+| Resolution | Point positions quantised to 4096 units per tile at each zoom (~0.6 m at the equator at zoom 14). |
 | Horizontal accuracy | Not stated by the provider |
 | Vertical accuracy | Not stated by the provider |
 | Accuracy reference | — |
 | Vertical datum | Not applicable |
 | Surface model | Not applicable |
-| Updates | static: Static rendering of OpenStreetMap data. |
-| Rate limits | None published. Continuum caps concurrent requests per host. |
-| Caching | Static tiles. |
-| Licence | [ODbL (OpenStreetMap data); NASA rendering](https://www.openstreetmap.org/copyright) |
-| Attribution | Features © OpenStreetMap contributors (ODbL), rendered by NASA GIBS. |
-| Limitations | The 15 m variant (Reference_Features_15m) was rejected for the same opaque-tile and HTTP 500 faults as the labels. |
+| Updates | periodic: Planet rebuilt regularly; the active build date is reported in the TileJSON URL. |
+| Rate limits | No limits on map views; please keep request volume reasonable. |
+| Caching | Cache-Control on tiles from the provider; TileJSON max-age=3600. |
+| Licence | [ODbL (data); OpenMapTiles schema (BSD/CC-BY)](https://www.openstreetmap.org/copyright) |
+| Attribution | OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL). |
+| Limitations | English names (name:en) where mapped, otherwise the local name. Labels are drawn into imagery tiles: they are not searchable or selectable, and a name can be cut where tiles of different zoom meet. |
 | Status | integrated |
 
 ### Coastlines
@@ -750,7 +750,8 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | NASA FIRMS active fire API | Needs a MAP_KEY. The same detections are shown visually through GIBS thermal-anomaly layers in a later release. |
 | OpenTopography global DEM API | Needs an API key. |
 | Open Topo Data public API | No CORS headers on responses; a browser cannot read them. |
-| OpenStreetMap standard tiles (tile.openstreetmap.org) | Usage policy discourages applications using it as a default layer; OSM data reaches Continuum through NASA GIBS reference layers and OpenFreeMap instead. |
+| OpenStreetMap standard tiles (tile.openstreetmap.org) | Usage policy discourages applications using it as a default layer; OSM data reaches Continuum through OpenFreeMap vector tiles instead. |
+| NASA GIBS Reference_Labels and Reference_Features (raster, OpenStreetMap) | Used in v0.1.0, then replaced. The tiles stop at zoom 9 and are only magnified beyond it, so names grow and never thin out as you zoom in, and borders stay coarse. The 15 m variants returned opaque black tiles and HTTP 500s. Borders and place names now come from OpenFreeMap vector tiles, drawn for each zoom. |
 | Esri World Imagery | Tiles respond to browsers, but production use is governed by Esri terms that expect an ArcGIS account. |
 | Stadia / MapTiler / Thunderforest basemaps | Require an API key or domain registration. |
 | Moon, Mars and planetary terrain (NASA Trek WMTS) | Planned for the beyond-Earth phase; not yet evaluated for browser access. |

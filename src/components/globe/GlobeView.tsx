@@ -2,13 +2,19 @@
 // page shell renders immediately; WebGL is checked first so a missing GPU produces an
 // explanation instead of a blank page.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import { statusStore, useStatus } from '../../core/state/hooks';
 import type { Engine } from '../../spatial/rendering/Engine';
 
-export function GlobeView({ onEngine }: { onEngine: (engine: Engine | null) => void }) {
+export function GlobeView({
+  onEngine,
+  creditsRef,
+}: {
+  onEngine: (engine: Engine | null) => void;
+  /** Where Cesium writes the provider credits (inside the status bar). */
+  creditsRef: RefObject<HTMLDivElement | null>;
+}) {
   const container = useRef<HTMLDivElement>(null);
-  const credits = useRef<HTMLDivElement>(null);
   const engineState = useStatus((s) => ({ engine: s.engine, error: s.engineError }));
 
   useEffect(() => {
@@ -17,12 +23,12 @@ export function GlobeView({ onEngine }: { onEngine: (engine: Engine | null) => v
     void (async () => {
       try {
         const { Engine } = await import('../../spatial/rendering/Engine');
-        if (cancelled || !container.current || !credits.current) return;
+        if (cancelled || !container.current || !creditsRef.current) return;
         if (!Engine.isWebGLAvailable()) {
           statusStore.set({ engine: 'webgl-unavailable' });
           return;
         }
-        engine = new Engine(container.current, credits.current);
+        engine = new Engine(container.current, creditsRef.current);
         onEngine(engine);
       } catch (error) {
         console.error(error);
@@ -37,7 +43,7 @@ export function GlobeView({ onEngine }: { onEngine: (engine: Engine | null) => v
       onEngine(null);
       engine?.destroy();
     };
-  }, [onEngine]);
+  }, [onEngine, creditsRef]);
 
   return (
     <>
@@ -48,7 +54,6 @@ export function GlobeView({ onEngine }: { onEngine: (engine: Engine | null) => v
         aria-label="3D globe"
         role="application"
       />
-      <div ref={credits} className="credits" aria-label="Data attribution" />
       {engineState.engine === 'loading' && (
         <div className="globe-message" role="status">
           <span className="spinner" aria-hidden="true" />

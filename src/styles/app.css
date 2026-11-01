@@ -1,6 +1,6 @@
 /* Continuum surface styles.
    Foundations (colour, type, spacing, radius, elevation, motion) come from the shared
-   design system's tokens, loaded from https://harithkavish.com/design-system/styles.css.
+   design system's tokens, loaded from https://harithkavish.com/design-system/v1.0.0/.
    This file lays out product-specific HUD components from those tokens; it defines no
    palette, type scale or spacing scale of its own. */
 
@@ -8,7 +8,7 @@
   --hud-gap: var(--space-md);
   /* Clears the shared sticky header (its top margin + its height). */
   --hud-top: calc(var(--space-md) + 10px + 4.4rem + var(--space-sm));
-  --hud-bottom: 3.1rem;
+  --hud-bottom: 2.75rem;
   --panel-width-left: 19.5rem;
   --panel-width-right: 23rem;
 }
@@ -32,6 +32,16 @@ body::before {
 /* The shared header floats over the globe. */
 .site-header {
   z-index: var(--z-header);
+}
+
+/* Header items that open a dialog are buttons; the design system styles .site-nav__link
+   for links and leaves buttons with the browser's grey fill. Local until the design system
+   resets it (reported). */
+button.site-nav__link {
+  background: transparent;
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
 }
 
 .visually-hidden {
@@ -74,25 +84,14 @@ body::before {
   display: none !important;
 }
 
+/* Provider credits, written by Cesium, on the status bar's one line; the Sources dialog
+   has every attribution in full. */
 .credits {
-  position: fixed;
-  left: var(--hud-gap);
-  right: var(--hud-gap);
-  bottom: calc(var(--hud-bottom) + 0.35rem);
-  z-index: 2;
-  pointer-events: auto;
-  font-size: var(--font-size-xs);
-  line-height: 1.4;
-  color: #e9eef1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  text-align: center;
-  max-height: 3em;
+  flex: 1 1 0;
+  min-width: 6rem;
   overflow: hidden;
-}
-
-.credits .cesium-credit-textContainer,
-.credits .cesium-credit-logoContainer {
-  display: inline;
+  color: var(--muted);
+  text-align: right;
 }
 
 .credits .cesium-widget-credits {
@@ -100,6 +99,13 @@ body::before {
   display: block;
   padding: 0;
   font-size: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.credits .cesium-credit-textContainer {
+  display: inline;
 }
 
 .credits .cesium-credit-delimiter {
@@ -107,14 +113,11 @@ body::before {
   opacity: 0.7;
 }
 
-.credits .cesium-credit-logoContainer img {
-  height: 14px;
-  vertical-align: middle;
-  opacity: 0.8;
-}
-
+/* Cesium ion's logo: Continuum uses no Cesium ion service. Cesium sets display inline on
+   these elements, so only !important hides them. */
+.credits .cesium-credit-logoContainer,
 .credits .cesium-credit-expand-link {
-  display: none;
+  display: none !important;
 }
 
 .globe-message {
@@ -202,7 +205,7 @@ body::before {
 .panel-shell {
   position: fixed;
   top: var(--hud-top);
-  bottom: calc(var(--hud-bottom) + 3.2rem);
+  bottom: calc(var(--hud-bottom) + var(--hud-gap));
   display: flex;
   flex-direction: column;
   gap: var(--space-2xs);
@@ -718,41 +721,33 @@ body::before {
   color: var(--muted);
 }
 
-/* ------------------------------------------------------------------ toolbar */
-
-.toolbar {
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--hud-bottom) + 2.9rem);
-  transform: translateX(-50%);
-  display: flex;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: calc(100vw - 2 * var(--hud-gap));
-}
+/* ------------------------------------------------------------------ tools */
 
 .toolbar__group {
   display: flex;
+  flex: none;
   gap: 2px;
-  padding: 3px;
+  padding: 2px;
   border-radius: var(--radius-pill);
   border: var(--border-hairline) solid var(--border);
-  background: var(--header-bg);
-  backdrop-filter: var(--blur-chrome);
-  box-shadow: var(--shadow-strong);
+  background: var(--surface-soft);
 }
 
 .toolbar__button {
   font: inherit;
-  font-size: var(--font-size-sm);
-  min-width: 2.4rem;
-  padding: 0.4rem 0.8rem;
+  font-size: var(--font-size-xs);
+  padding: 0.25rem 0.7rem;
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text);
   cursor: pointer;
+}
+
+.toolbar__icon {
+  display: none;
+  width: 1rem;
+  height: 1rem;
 }
 
 .toolbar__button:hover {
@@ -771,41 +766,75 @@ body::before {
 
 /* ------------------------------------------------------------------ status bar */
 
+/* One line: tools, readouts, camera buttons, then the credits taking what is left. */
 .statusbar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  min-height: var(--hud-bottom);
+  height: calc(var(--hud-bottom) + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  padding: 0.35rem var(--hud-gap) calc(0.35rem + env(safe-area-inset-bottom));
+  gap: var(--space-sm);
+  padding: 0 var(--hud-gap) env(safe-area-inset-bottom);
   background: var(--footer-bg);
   backdrop-filter: var(--blur-chrome-footer);
   border-top: var(--border-hairline) solid var(--border);
   font-size: var(--font-size-xs);
-  overflow-x: auto;
   white-space: nowrap;
-  scrollbar-width: none;
+  overflow: hidden;
 }
 
 .statusbar__item {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem;
+  flex: none;
   color: var(--text);
 }
 
-.statusbar__item small {
+.statusbar__item small,
+.statusbar__hint {
   color: var(--muted);
 }
 
-.statusbar__label {
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-label);
-  font-size: 0.68rem;
+.statusbar__group {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
+
+.statusbar__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.statusbar__icon svg {
+  width: 1rem;
+  height: 1rem;
+  transition: rotate var(--transition-fast);
+}
+
+.statusbar__icon:hover {
+  background: var(--surface-soft);
+}
+
+.statusbar__icon[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.statusbar__attribution {
+  display: none;
+  font-size: var(--font-size-sm);
 }
 
 .statusbar__button {
@@ -1032,7 +1061,7 @@ body::before {
   position: fixed;
   left: var(--hud-gap);
   right: var(--hud-gap);
-  bottom: calc(var(--hud-bottom) + 5.2rem);
+  bottom: calc(var(--hud-bottom) + var(--hud-gap));
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -1087,7 +1116,7 @@ body::before {
 
   .panel-shell {
     top: auto;
-    bottom: calc(var(--hud-bottom) + 3.1rem);
+    bottom: calc(var(--hud-bottom) + var(--hud-gap));
     width: auto !important;
     left: var(--hud-gap);
     right: var(--hud-gap);
@@ -1118,19 +1147,51 @@ body::before {
     max-height: calc(58vh - 2.5rem);
   }
 
-  .toolbar {
-    bottom: calc(var(--hud-bottom) + 0.4rem);
+  /* Still one line: the pointer readout goes (touch has no hover pointer), and the
+     credits shrink to what fits; tapping them opens every attribution in full. */
+  .statusbar {
+    gap: var(--space-xs);
   }
 
-  /* Attribution stays visible on every screen size; it moves above the (wrapped) tool bar. */
+  .statusbar__item--pointer {
+    display: none;
+  }
+
+  .toolbar__button {
+    display: inline-grid;
+    place-items: center;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .toolbar__icon {
+    display: block;
+  }
+
+  .toolbar__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .statusbar__icon {
+    width: 1.6rem;
+  }
+
+  /* The dot alone says whether data is still arriving. */
+  .statusbar__hint {
+    display: none;
+  }
+
   .credits {
-    bottom: calc(var(--hud-bottom) + 6.6rem);
-    font-size: 0.62rem;
-    max-height: 2.5em;
+    display: none;
   }
 
-  .vsticks {
-    bottom: calc(var(--hud-bottom) + 9.4rem);
+  .statusbar__attribution {
+    display: inline-grid;
+    margin-left: auto;
   }
 
   .row {
