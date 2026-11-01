@@ -351,6 +351,25 @@ export const REPLACED_OVERLAYS: Record<string, string[]> = {
   'gibs-reference-features': ['openfreemap-boundaries'],
 };
 
+/**
+ * The overlays of the releases before #8, which saved choices without recording which
+ * overlays they had seen. Those choices decide only these; roads, buildings, aerial photos
+ * and clouds start at their defaults. (A reader who switched one of those off under #8
+ * sees it back once: their saved list cannot be told apart from an older one.)
+ */
+export const OVERLAYS_BEFORE_KNOWN = [
+  'gibs-reference-labels',
+  'gibs-reference-features',
+  'openfreemap-boundaries',
+  'openfreemap-places',
+  'gibs-coastlines',
+  'gibs-surface-water',
+  'gibs-flood',
+  'gebco-2026',
+  'gibs-sst',
+  'gibs-precipitation',
+];
+
 export function layerDefinition(providerId: string): ImageryLayerDefinition {
   const def = IMAGERY_LAYERS.find((l) => l.providerId === providerId);
   if (!def) throw new Error(`No imagery layer for ${providerId}`);

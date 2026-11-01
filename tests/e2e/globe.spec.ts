@@ -3,7 +3,7 @@
 // no persistence, documented hosts only).
 
 import { expect, test } from '@playwright/test';
-import { ALLOWED_HOSTS, camera, setView, waitForEngine } from './helpers';
+import { ALLOWED_HOSTS, camera, savedOverlays, setView, waitForEngine } from './helpers';
 
 test.describe('globe, data and architecture', () => {
   test('renders real terrain and imagery with visible attribution', async ({ page }) => {
@@ -89,11 +89,9 @@ test.describe('globe, data and architecture', () => {
       if (r.url().includes('view.eumetsat.int/geoserver/wms')) urls.eumetsat.push(r.url());
       if (r.url().includes('Band13_Clean_Infrared')) urls.gibs++;
     });
-    await page.addInitScript(() =>
-      localStorage.setItem(
-        'continuum.preferences.v1',
-        JSON.stringify({ overlays: ['geostationary-clouds'] }),
-      ),
+    await page.addInitScript(
+      (prefs) => localStorage.setItem('continuum.preferences.v1', prefs),
+      savedOverlays(['geostationary-clouds']),
     );
     await page.goto('/');
     await waitForEngine(page);
@@ -123,6 +121,39 @@ test.describe('globe, data and architecture', () => {
         timeout: 30_000,
       })
       .toBe(true);
+  });
+
+  test('switches on overlays added since a reader saved their choices', async ({ page }) => {
+    // What a release before #8 saved, with place names switched off: it never saw roads,
+    // buildings, aerial photos or clouds, so those must start at their defaults (on).
+    await page.addInitScript(() =>
+      localStorage.setItem(
+        'continuum.preferences.v1',
+        JSON.stringify({ overlays: ['openfreemap-boundaries'] }),
+      ),
+    );
+    await page.goto('/');
+    await waitForEngine(page);
+    const active: string[] = await page.evaluate(() =>
+      (window as any).continuum.engine.imagery.activeProviderIds(),
+    );
+    expect(active).toEqual(
+      expect.arrayContaining([
+        'openfreemap-boundaries',
+        'openfreemap-roads',
+        'overture-buildings',
+        'ign-orthophotos',
+        'geostationary-clouds',
+      ]),
+    );
+    expect(active).not.toContain('openfreemap-places');
+    // Saved again with every overlay now offered, so later additions are told apart.
+    const saved = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('continuum.preferences.v1')!),
+    );
+    expect(saved.knownOverlays).toEqual(
+      expect.arrayContaining(['openfreemap-places', 'openfreemap-roads', 'geostationary-clouds']),
+    );
   });
 
   test('loads USGS earthquakes and NASA EONET events into normalised records', async ({ page }) => {
