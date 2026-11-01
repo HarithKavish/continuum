@@ -64,6 +64,13 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | [Precipitation rate (IMERG)](#gibs-precipitation) | weather | global | 0 | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [Sea surface temperature (GHRSST MUR)](#gibs-sst) | bathymetry | global | 0 | none | verified 2026-11-01 | NASA open data (no use restrictions) | integrated |
 | [GEBCO 2026 bathymetry](#gebco-2026) | bathymetry | global | 15 arc-seconds (~460 m at the equator) grid; much of the seafloor is interpolated between sparse soundings | none | verified 2026-11-01 | Public domain (GEBCO Grid terms of use); attribution required | integrated |
+| [Roads and railways (OpenFreeMap)](#openfreemap-roads) | geography | global | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
+| [Building footprints (Overture Maps)](#overture-buildings) | buildings | global | Vector geometry quantised to the zoom-14 tile grid (4096 units per tile, ~0 | none | verified 2026-11-01 | ODbL (theme); CC BY 4.0 for Google Open Buildings and Esri Community Maps contributions | integrated |
+| [Live clouds (geostationary infrared)](#geostationary-clouds) | weather | global | Infrared imagery of about 2–3 km at the sub-satellite point, coarser towards the edge of each view | none | verified 2026-11-01 | EUMETSAT data policy; NASA open data | integrated |
+| [Aerial photos of France (IGN)](#ign-orthophotos) | imagery | regional | BD ORTHO is a 20 cm product; the service goes to zoom 19 (~0 | none | verified 2026-11-01 | Licence Ouverte / Open Licence (Etalab) | integrated |
+| [Aerial photos of the Netherlands (PDOK)](#pdok-luchtfoto) | imagery | regional | 8 cm in the web services (some areas captured at 5 cm) | none | verified 2026-11-01 | CC BY 4.0 | integrated |
+| [Aerial photos of Switzerland (swisstopo SWISSIMAGE)](#swisstopo-swissimage) | imagery | regional | SWISSIMAGE 10 cm product; the service goes to zoom 20 | none | verified 2026-11-01 | swisstopo free geodata (OGD) terms | integrated |
+| [Aerial photos of Austria (basemap.at)](#basemap-at-orthofoto) | imagery | regional | Not stated by the provider (the layer is named "30cm"); the service goes to zoom 20 | none | verified 2026-11-01 | CC BY 4.0 (Open Government Data Austria) | integrated |
 | [OpenStreetMap buildings (OpenFreeMap)](#openfreemap-buildings) | buildings | global | Vector geometry quantised to the zoom-14 tile grid (4096 units per tile, ~0 | none | verified 2026-11-01 | ODbL (data); OpenMapTiles schema (BSD/CC-BY) | integrated |
 | [USGS earthquakes](#usgs-earthquakes) | earthquakes | global | Point hypocentres | none | verified 2026-11-01 | Public domain (U.S. Government work) | integrated |
 | [NASA EONET natural events](#nasa-eonet) | natural-events | global | Points, tracks and polygons as supplied by each source | none | verified 2026-11-01 | NASA open data; individual sources keep their own terms | integrated |
@@ -508,6 +515,209 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | Limitations | Imagery only: the WMS does not return depth values (GetFeatureInfo returns no results), so it is never used as a terrain mesh. Interpolated cells are visually indistinguishable from measured ones in this layer. Not for navigation (GEBCO terms of use). |
 | Status | integrated |
 
+### Roads and railways (OpenFreeMap)
+
+<a id="openfreemap-roads"></a>
+
+| | |
+|---|---|
+| Provider | OpenFreeMap (vector tiles, OpenMapTiles schema) from OpenStreetMap data |
+| Dataset | OpenMapTiles "transportation" and "transportation_name" layers, planet extract |
+| Description | Roads from motorways to footpaths, railways and ferries, with street names, drawn for each zoom over the imagery. |
+| Documentation | https://openmaptiles.org/schema/#transportation |
+| Endpoint | `https://tiles.openfreemap.org/planet` (mvt; Mapbox Vector Tiles via TileJSON) |
+| Capabilities | vector-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | Roads as mapped in OpenStreetMap; the tiles add minor roads as zoom increases (service roads and paths at zoom 14). |
+| Resolution | Geometry generalised for each zoom and quantised to 4096 units per tile; full OSM detail at zoom 14 (~0.6 m at the equator), drawn larger beyond it. |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Planet rebuilt regularly; the active build date is reported in the TileJSON URL. |
+| Rate limits | No limits on map views; please keep request volume reasonable. |
+| Caching | Cache-Control on tiles from the provider; TileJSON max-age=3600. |
+| Licence | [ODbL (data); OpenMapTiles schema (BSD/CC-BY)](https://www.openstreetmap.org/copyright) |
+| Attribution | OpenFreeMap © OpenMapTiles. Data © OpenStreetMap contributors (ODbL). |
+| Limitations | Road widths are a display choice by class and zoom, not the mapped carriageway width. A street name is placed along the longest straight stretch of its road in each tile, so curving streets may go unnamed. |
+| Status | integrated |
+
+### Building footprints (Overture Maps)
+
+<a id="overture-buildings"></a>
+
+| | |
+|---|---|
+| Provider | Overture Maps Foundation, conflating OpenStreetMap, Google Open Buildings, Microsoft Global ML Building Footprints and other sources |
+| Dataset | Overture "buildings" theme, PMTiles archive of the latest release |
+| Description | Building outlines, mapped by people or detected from imagery by machine learning, drawn at neighbourhood scale. |
+| Documentation | https://docs.overturemaps.org/examples/overture-tiles |
+| Endpoint | `https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/<release>/buildings.pmtiles` (mvt; Mapbox Vector Tiles in a PMTiles archive, read with HTTP range requests) |
+| Capabilities | vector-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | Global. Far denser than OpenStreetMap alone where machine-detected footprints exist: a zoom-14 tile over central Kochi holds 7 365 buildings (OpenStreetMap via OpenFreeMap: 37). |
+| Resolution | Vector geometry quantised to the zoom-14 tile grid (4096 units per tile, ~0.6 m at the equator); generalised at lower zooms. |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Monthly releases; the latest is read from Overture’s STAC catalogue (stac.overturemaps.org) when the layer first loads. |
+| Rate limits | None published. Continuum keeps four range requests in flight at most. |
+| Caching | Amazon S3 object; tiles are kept decoded in memory for the session only. |
+| Licence | [ODbL (theme); CC BY 4.0 for Google Open Buildings and Esri Community Maps contributions](https://docs.overturemaps.org/attribution/) |
+| Attribution | Buildings: Overture Maps Foundation (overturemaps.org). © OpenStreetMap contributors (ODbL); Google Open Buildings (CC BY 4.0); Microsoft Global ML Building Footprints (ODbL); Esri Community Maps contributors (CC BY 4.0). |
+| Limitations | Overture publishes these tiles for inspection, not as a production basemap, and removes older releases. If the release in use is withdrawn during a session, the layer shows nothing until reload. Footprints only: almost none carry a height (12 of 7 365 in central Kochi), so they are not extruded. Machine-detected outlines can be missing, merged or misplaced; each footprint’s source is in the data. Zoom-14 tiles reach ~2 MB in dense areas, so footprints load only at neighbourhood scale. |
+| Status | integrated |
+
+### Live clouds (geostationary infrared)
+
+<a id="geostationary-clouds"></a>
+
+| | |
+|---|---|
+| Provider | EUMETSAT (Meteosat, via EUMETView) and NASA ESDIS GIBS (GOES, Himawari) |
+| Dataset | IR 10.8 µm images from Meteosat 0° and Meteosat Indian Ocean (EUMETView WMS msg_fes:ir108, msg_iodc:ir108); Band 13 Clean Infrared from GOES-East, GOES-West and Himawari (GIBS) |
+| Description | Clouds from five geostationary satellites, stitched by longitude and looped over the last four hours, hour by hour. |
+| Documentation | https://view.eumetsat.int/ |
+| Endpoint | `https://view.eumetsat.int/geoserver/wms; https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/` (wms; PNG; EUMETView WMS GetMap and GIBS WMTS tiles, with a TIME dimension) |
+| Capabilities | imagery-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | All longitudes. Each longitude is drawn by the nearest satellite; imagery thins towards the poles, where geostationary views are oblique. |
+| Resolution | Infrared imagery of about 2–3 km at the sub-satellite point, coarser towards the edge of each view. GIBS tiles are requested to zoom 5; Meteosat to zoom 3 (~20 km pixels), resampled beyond, because EUMETView renders each request on demand (measured 2026-11-01: 1–15 s per tile for Meteosat Indian Ocean, ~22 s for Meteosat 0°). |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | near-real-time: Hourly frames; the newest is the latest full hour at least 45 minutes ago, so frames are 45–105 minutes old. EUMETView publishes every 15 minutes and GIBS every 10. |
+| Rate limits | None published. Continuum keeps six requests in flight at most and requests nothing deeper than zoom 5. |
+| Caching | EUMETView sends Cache-Control: max-age=604800; frames are reused while they stay in the loop. |
+| Licence | [EUMETSAT data policy; NASA open data](https://www.eumetsat.int/eumetsat-streamlines-its-data-and-service-policy-make-more-data-free-charge) — Since 15 January 2019 hourly Meteosat imagery is not subject to licensing, while 15-minute imagery is free three hours after sensing, so Continuum uses hourly frames only. NASA GIBS imagery has no use restrictions. |
+| Attribution | Live clouds: © EUMETSAT, Meteosat IR 10.8 µm via EUMETView. NASA ESDIS GIBS, GOES-East, GOES-West and Himawari Band 13 imagery. |
+| Limitations | Opacity is a display rule on the infrared brightness temperature (clear at 0 °C, opaque at −40 °C), not a measured cloud fraction. Warm low cloud and fog are missed, and very cold ground can read as cloud. EUMETView publishes its infrared as greyscale without a scale. Its temperatures are fitted against Himawari where both see the same clouds (grey ≈ 70 − 3.2 × T °C, 67 424 pixel pairs over the Bay of Bengal, 2026-11-01). Neighbouring satellites see clouds from different angles and at slightly different times, so seams can show along the boundary longitudes. The loop shows real hourly frames, crossfaded; it does not interpolate motion between them. On a first visit the older frames join the loop as they load, over a minute or more; Europe and Africa (Meteosat 0°) come last. EUMETView responses are cached by the browser for seven days. |
+| Status | integrated |
+
+### Aerial photos of France (IGN)
+
+<a id="ign-orthophotos"></a>
+
+| | |
+|---|---|
+| Provider | Institut national de l’information géographique et forestière (IGN), Géoplateforme |
+| Dataset | ORTHOIMAGERY.ORTHOPHOTOS (BD ORTHO) |
+| Description | National aerial orthophotography of metropolitan France. |
+| Documentation | https://geoservices.ign.fr/services-web |
+| Endpoint | `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIXSET=PM` (wmts-rest; JPEG tiles, EPSG:3857, zoom 0–19) |
+| Capabilities | imagery-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | Metropolitan France. Tiles beyond France come back pure white and are drawn as no data. |
+| Resolution | BD ORTHO is a 20 cm product; the service goes to zoom 19 (~0.2 m pixels at 46°N). |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Renewed department by department on IGN’s regular aerial survey cycle; dates vary by area. |
+| Rate limits | None published. |
+| Caching | Provider cache headers. |
+| Licence | [Licence Ouverte / Open Licence (Etalab)](https://www.etalab.gouv.fr/licence-ouverte-open-licence/) — IGN public data has been under the Etalab open licence since 1 January 2021. |
+| Attribution | Orthophotos © IGN, Géoplateforme, Licence Ouverte (Etalab). |
+| Limitations | Shown from regional zoom inwards only, over metropolitan France. |
+| Status | integrated |
+
+### Aerial photos of the Netherlands (PDOK)
+
+<a id="pdok-luchtfoto"></a>
+
+| | |
+|---|---|
+| Provider | Beeldmateriaal Nederland, served by PDOK |
+| Dataset | Luchtfoto RGB, Actueel_orthoHR |
+| Description | National high-resolution aerial photography of the Netherlands, current year. |
+| Documentation | https://www.pdok.nl/ |
+| Endpoint | `https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg` (wmts-rest; JPEG tiles, EPSG:3857, zoom 0–21) |
+| Capabilities | imagery-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | The Netherlands. Tiles beyond it come back pure white and are drawn as no data. |
+| Resolution | 8 cm in the web services (some areas captured at 5 cm). |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Flown annually; "Actueel" is the most recent year. |
+| Rate limits | None published. |
+| Caching | Provider cache headers. |
+| Licence | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Attribution | Luchtfoto © Beeldmateriaal Nederland, via PDOK, CC BY 4.0. |
+| Limitations | Shown from regional zoom inwards only, over the Netherlands. |
+| Status | integrated |
+
+### Aerial photos of Switzerland (swisstopo SWISSIMAGE)
+
+<a id="swisstopo-swissimage"></a>
+
+| | |
+|---|---|
+| Provider | Federal Office of Topography swisstopo |
+| Dataset | ch.swisstopo.swissimage (current) |
+| Description | National aerial orthophoto mosaic of Switzerland. |
+| Documentation | https://www.swisstopo.admin.ch/en/orthoimage-swissimage-10 |
+| Endpoint | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg` (wmts-rest; JPEG tiles, EPSG:3857, zoom 0–20) |
+| Capabilities | imagery-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | Switzerland, with imagery a little beyond its borders. |
+| Resolution | SWISSIMAGE 10 cm product; the service goes to zoom 20. |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Renewed on swisstopo’s survey cycle; dates vary by area. |
+| Rate limits | None published. |
+| Caching | Provider cache headers. |
+| Licence | [swisstopo free geodata (OGD) terms](https://www.swisstopo.admin.ch/en/conditions-geodata) — Free use, including commercial, with the source credited. |
+| Attribution | SWISSIMAGE © Federal Office of Topography swisstopo. |
+| Limitations | Shown from regional zoom inwards only, over Switzerland. |
+| Status | integrated |
+
+### Aerial photos of Austria (basemap.at)
+
+<a id="basemap-at-orthofoto"></a>
+
+| | |
+|---|---|
+| Provider | basemap.at (Austrian federal states and partners) |
+| Dataset | bmaporthofoto30cm |
+| Description | Aerial orthophoto mosaic of Austria. |
+| Documentation | https://basemap.at/en/ |
+| Endpoint | `https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg` (xyz; JPEG tiles, EPSG:3857, zoom 0–20) |
+| Capabilities | imagery-tiles |
+| Authentication | None |
+| CORS (browser) | Verified 2026-11-01; Access-Control-Allow-Origin: * |
+| Coverage | Austria. Tiles beyond it return 404 and are drawn as no data. |
+| Resolution | Not stated by the provider (the layer is named "30cm"); the service goes to zoom 20. |
+| Horizontal accuracy | Not stated by the provider |
+| Vertical accuracy | Not stated by the provider |
+| Accuracy reference | — |
+| Vertical datum | Not applicable |
+| Surface model | Not applicable |
+| Updates | periodic: Not stated per area. |
+| Rate limits | None published. |
+| Caching | Provider cache headers. |
+| Licence | [CC BY 4.0 (Open Government Data Austria)](https://basemap.at/en/) |
+| Attribution | Data source: basemap.at (CC BY 4.0). |
+| Limitations | Shown from regional zoom inwards only, over Austria. |
+| Status | integrated |
+
 ### OpenStreetMap buildings (OpenFreeMap)
 
 <a id="openfreemap-buildings"></a>
@@ -751,6 +961,11 @@ Generated from `src/config/providers/` — edit there, then regenerate.
 | OpenTopography global DEM API | Needs an API key. |
 | Open Topo Data public API | No CORS headers on responses; a browser cannot read them. |
 | OpenStreetMap standard tiles (tile.openstreetmap.org) | Usage policy discourages applications using it as a default layer; OSM data reaches Continuum through OpenFreeMap vector tiles instead. |
+| EUMETSAT Meteosat imagery every 15 minutes | Under EUMETSAT’s data policy, 15-minute imagery is free only three hours after sensing, while hourly imagery is free in real time. The live clouds use hourly frames. |
+| RainViewer satellite infrared | The public weather-maps feed lists no satellite frames any more (checked 2026-11-01); only radar remains. |
+| GSI Japan seamless aerial photos (地理院タイル) | Browser-accessible (CORS *), but the terms may require an approval application when a map is a site’s main content, as it is here. Not integrated until that is clarified. |
+| IGN Spain PNOA orthophotos | Browser-accessible and CC BY 4.0, but beyond Spain the service returns a low-detail fill (e.g. over Portugal) that would cover the Sentinel-2 imagery there. |
+| OpenAerialMap mosaic (Kontur) | The mosaic tile server (apps.kontur.io) did not accept connections when tested. |
 | NASA GIBS Reference_Labels and Reference_Features (raster, OpenStreetMap) | Used in v0.1.0, then replaced. The tiles stop at zoom 9 and are only magnified beyond it, so names grow and never thin out as you zoom in, and borders stay coarse. The 15 m variants returned opaque black tiles and HTTP 500s. Borders and place names now come from OpenFreeMap vector tiles, drawn for each zoom. |
 | Esri World Imagery | Tiles respond to browsers, but production use is governed by Esri terms that expect an ArcGIS account. |
 | Stadia / MapTiler / Thunderforest basemaps | Require an API key or domain registration. |

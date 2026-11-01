@@ -5,6 +5,8 @@ import {
   labelsForTile,
   placeLabels,
   placeStyle,
+  roadLabelStyle,
+  roadStyle,
   type AnchoredCandidate,
   type LabelCandidate,
 } from '../../src/spatial/imagery/vectorStyle';
@@ -130,5 +132,38 @@ describe('labels across a tile edge', () => {
       for (const c of labels.filter((l) => l.box[0] < TILE && l.box[2] > TILE))
         expect(keptA.has(c.text), `seed ${seed}, ${c.text}`).toBe(keptB.has(c.text));
     }
+  });
+});
+
+describe('road styles', () => {
+  it('adds road classes as the view closes in', () => {
+    expect(roadStyle('motorway', 4, false)).toBeNull();
+    expect(roadStyle('motorway', 5, false)).not.toBeNull();
+    expect(roadStyle('minor', 11, false)).toBeNull();
+    expect(roadStyle('minor', 12, false)).not.toBeNull();
+    expect(roadStyle('path', 13, false)).toBeNull();
+    expect(roadStyle('path', 14, false)).not.toBeNull();
+  });
+
+  it('widens roads as the camera comes closer, and keeps motorways widest', () => {
+    const w = (cls: string, level: number) => roadStyle(cls, level, false)!.width;
+    expect(w('primary', 15)).toBeGreaterThan(w('primary', 10));
+    expect(w('primary', 19)).toBeGreaterThan(w('primary', 18)); // beyond the last stop
+    expect(w('motorway', 14)).toBeGreaterThan(w('minor', 14));
+  });
+
+  it('draws tunnels faintly and ignores unknown classes', () => {
+    expect(roadStyle('primary', 14, true)!.color).toContain('0.35');
+    expect(roadStyle('primary', 14, true)!.casing).toBeUndefined();
+    expect(roadStyle('lane_of_mystery', 14, false)).toBeNull();
+    expect(roadStyle('constructor', 14, false)).toBeNull(); // not an inherited property
+  });
+
+  it('names major roads from zoom 13 and smaller streets from 15', () => {
+    expect(roadLabelStyle('primary', 12)).toBeNull();
+    expect(roadLabelStyle('primary', 13)).not.toBeNull();
+    expect(roadLabelStyle('minor', 14)).toBeNull();
+    expect(roadLabelStyle('minor', 15)).not.toBeNull();
+    expect(roadLabelStyle('service', 18)).toBeNull();
   });
 });

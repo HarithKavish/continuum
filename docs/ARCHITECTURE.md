@@ -85,6 +85,21 @@ Cesium objects: components read stores and call engine methods.
   are decluttered by priority, considering candidates up to half a tile beyond each edge so
   neighbouring tiles agree. Each vector tile is fetched once through a bounded queue and
   decoded once, in memory only.
+- **Roads and building footprints.** The same provider draws OpenFreeMap roads (with names
+  laid along the longest straight stretch) and Overture building footprints. Footprints
+  come from Overture's PMTiles archive, read by HTTP range request with the `pmtiles`
+  library, from zoom 14 inwards (`minimumTerrainLevel`).
+- **Aerial photos.** National orthophoto services are overlays limited to their country's
+  rectangle and to close-up terrain levels. Services that fill beyond their coverage with
+  white have pure-white pixels made transparent. Cesium decodes tiles to bitmaps already
+  flipped vertically, so that step undoes the flip before redrawing.
+- **Live clouds.** `CloudLayer` keeps one imagery layer per hourly frame (the last four
+  hours). Each frame's `CloudFrameProvider` stitches the five geostationary satellites by
+  longitude and turns infrared brightness temperature into white cloud opacity. Every
+  frame loads at opacity 0; Cesium loads but does not draw such layers. The input loop
+  crossfades between frames that are at least 80% loaded, at 15 updates a second, so the
+  globe renders only while frames change. Clouds fade out between 1 500 km and 150 km
+  altitude, and hold the newest frame in low-performance mode.
 
 ## Terrain pipeline
 

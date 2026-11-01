@@ -34,6 +34,30 @@ export const FUTURE_SOURCES: { name: string; reason: string }[] = [
       'Usage policy discourages applications using it as a default layer; OSM data reaches Continuum through OpenFreeMap vector tiles instead.',
   },
   {
+    name: 'EUMETSAT Meteosat imagery every 15 minutes',
+    reason:
+      'Under EUMETSAT’s data policy, 15-minute imagery is free only three hours after sensing, while hourly imagery is free in real time. The live clouds use hourly frames.',
+  },
+  {
+    name: 'RainViewer satellite infrared',
+    reason:
+      'The public weather-maps feed lists no satellite frames any more (checked 2026-11-01); only radar remains.',
+  },
+  {
+    name: 'GSI Japan seamless aerial photos (地理院タイル)',
+    reason:
+      'Browser-accessible (CORS *), but the terms may require an approval application when a map is a site’s main content, as it is here. Not integrated until that is clarified.',
+  },
+  {
+    name: 'IGN Spain PNOA orthophotos',
+    reason:
+      'Browser-accessible and CC BY 4.0, but beyond Spain the service returns a low-detail fill (e.g. over Portugal) that would cover the Sentinel-2 imagery there.',
+  },
+  {
+    name: 'OpenAerialMap mosaic (Kontur)',
+    reason: 'The mosaic tile server (apps.kontur.io) did not accept connections when tested.',
+  },
+  {
     name: 'NASA GIBS Reference_Labels and Reference_Features (raster, OpenStreetMap)',
     reason:
       'Used in v0.1.0, then replaced. The tiles stop at zoom 9 and are only magnified beyond it, so names grow and never thin out as you zoom in, and borders stay coarse. The 15 m variants returned opaque black tiles and HTTP 500s. Borders and place names now come from OpenFreeMap vector tiles, drawn for each zoom.',

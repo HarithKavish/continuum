@@ -17,6 +17,13 @@ export const ALLOWED_HOSTS = new Set([
   'epqs.nationalmap.gov',
   'gis.ngdc.noaa.gov',
   'nominatim.openstreetmap.org',
+  'view.eumetsat.int',
+  'stac.overturemaps.org',
+  'overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com',
+  'data.geopf.fr',
+  'service.pdok.nl',
+  'wmts.geo.admin.ch',
+  'mapsneu.wien.gv.at',
   // Not the app: Cloudflare injects its Web Analytics beacon into every harithkavish.com
   // page at the edge (a zone-wide setting), so it appears only on the deployed site.
   'static.cloudflareinsights.com',
