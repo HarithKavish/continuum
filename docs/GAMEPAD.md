@@ -82,6 +82,20 @@ The Gamepad API exposes state, not events: button presses are detected as edges 
 polls. A press shorter than one frame cannot be seen — at normal frame rates this is
 imperceptible; it matters only on very slow renderers.
 
+## In space
+
+Away from Earth (after choosing a body under Solar system, or scrolling out past the
+highest Earth view) the same inputs orbit the focused body instead of panning:
+
+| Input | Action |
+|---|---|
+| Left or right stick, W A S D, arrows, Q E R F | Orbit the body |
+| Triggers, Z / X, + / −, mouse wheel, pinch | Closer / farther |
+| Drag (mouse or one finger) | Orbit the body |
+| D-pad left / right, [ / ] | Previous / next body (Sun → Pluto) |
+| LB / RB | Time slower / faster (real time up to 30 days a second) |
+| Y, H | Back to Earth and its own controls |
+
 ## Keyboard
 
 | Keys | Action |

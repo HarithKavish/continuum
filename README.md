@@ -42,6 +42,10 @@ scripts.
 - **Day and night**: the globe is lit from where the Sun is right now, at every distance, with
   NASA Black Marble city lights on the night side; one button (or L) switches to full
   daylight.
+- **The solar system**: the Sun, the Moon and the planets where they are now, from JPL's
+  planetary elements and IAU rotation models, with their orbits; NASA mission maps of the
+  Moon, Mercury, Venus, Mars, Jupiter and Pluto (USGS); Saturn's rings from NASA's values.
+  Fly to any body, orbit it as it turns, and run time up to 30 days a second.
 - **3D buildings** from OpenStreetMap (OpenFreeMap vector tiles) near the ground.
 - **Live events**: USGS earthquakes (every minute) and NASA EONET natural events.
 - **Inspector**: coordinates, orthometric and ellipsoidal heights, geoid undulation, the

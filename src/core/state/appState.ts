@@ -11,6 +11,7 @@ import {
 } from '../../config/providers/layers';
 import type { EarthquakeFeed } from '../../providers/earthquakes/usgs';
 import type { ElevationSample, ObservationRecord, WeatherSample } from '../../providers/base/types';
+import type { BodyId } from '../../spatial/space/bodies';
 import { loadPreferences, restoreOverlays } from './preferences';
 import { createStore } from './store';
 
@@ -42,6 +43,24 @@ export const layersStore = createStore({
   lighting: prefs.lighting ?? true,
   /** Whether the live cloud layer loops its recent frames, or holds the newest. */
   cloudsPlaying: true,
+});
+
+export const spaceStore = createStore({
+  /** The body being orbited; null while navigating at Earth. */
+  focus: null as BodyId | null,
+  flying: false,
+  orbits: prefs.space?.orbits ?? true,
+  labels: prefs.space?.labels ?? true,
+  /** Simulated seconds per real second (Cesium's clock multiplier). */
+  speed: 1,
+  paused: false,
+  /** The clock (ISO 8601 UTC), published a few times a second. */
+  time: '',
+  /** Whether the clock shows the present moment. */
+  live: true,
+  /** From the camera to the focused body's centre, and from Earth's centre to it, metres. */
+  distance: null as number | null,
+  fromEarth: null as number | null,
 });
 
 export interface FeedState {

@@ -146,6 +146,34 @@ Cesium's term: full light once the Sun is about 8° above the horizon, 30% at ni
 sphere rather than the terrain. Twilight is therefore approximate. Black Marble lights are a
 2016 composite, not tonight's lights, at 500 m resolution.
 
+## The solar system
+
+Positions are geometric (where each body is at the clock's time), not corrected for light
+travel time, and measured against JPL Horizons in the unit and end-to-end tests:
+
+| | Source | Measured against Horizons |
+|---|---|---|
+| Mercury, Venus, Mars, Uranus | JPL approximate elements | Heliocentric: within twice JPL's nominal errors at 1850, 2000, 2026 and 2040. Seen from Earth on 2026-11-01: 2–6″ |
+| Jupiter, Saturn | JPL approximate elements | Within twice JPL's nominal errors (400″ and 600″ in longitude). Seen from Earth on 2026-11-01: 95″ and 293″ |
+| Neptune | JPL approximate elements | Its elements follow the barycentre: 1–6″ from that, up to 45″ (0.9 million km) from the heliocentric position used |
+| Pluto | JPL Horizons osculating elements, 2026-11-01 | Exact at that date; within 0.15° from 2000 to 2040; 4.6° in 1850 |
+| Sun | Cesium (Simon et al. 1994) | 2.4″ |
+| Moon | Cesium (Simon et al. 1994, mean elements) | 570″ (0.16°, a third of its width) on 2026-11-01 |
+
+Orientations follow the IAU 2015 models. The sub-Earth point Horizons reports agrees within
+0.2° for all eight bodies tested. Jupiter's periodic pole terms (≤ 0.0022°) and Mercury's
+libration (≤ 0.011°) are left out. The giant planets turn at their System III (magnetic)
+rates, which their cloud bands drift against.
+
+Maps wrap their bodies in planetocentric, east-positive longitude, as served. Each is one
+image (2 048 pixels round, 4 096 for the Moon and Mars close up), so close-up detail is the
+image's, not the source mosaic's. Venus shows its radar-mapped surface, not its clouds, and
+Mars's colours were added to the Viking mosaic. Saturn, Uranus and Neptune are drawn in
+plain display colours, because no public, data-based global map with clear terms was found.
+The Sun is a featureless disc with linear limb darkening (u = 0.6, a display
+approximation). Saturn's rings use the middle of NASA's published optical-depth and albedo
+ranges, without ring or planet shadows.
+
 ## Precision shown
 
 Elevations are shown in whole metres (the best sources are decimetre-scale; most are

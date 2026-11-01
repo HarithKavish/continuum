@@ -268,6 +268,37 @@ which had not been requested, and read 0 m. That cut a trench along the edge, th
 the sky showed. The same line was on the live site. Edge samples now use the requested tile
 that holds the edge.
 
+### The solar system (measured 2026-11-01)
+
+**Positions.** JPL's "Approximate Positions of the Planets" gives Keplerian elements with
+published nominal errors, needs no network, and agrees with Horizons as stated (see
+ACCURACY). Neptune's elements match its barycentric position (1–6″) better than its
+heliocentric one (up to 45″). JPL removed Pluto from those tables, so its elements come
+from Horizons for one epoch. Cesium already carries the Sun and Moon (Simon et al. 1994).
+Its Moon is 0.16° from Horizons, and a fuller lunar theory is a candidate improvement.
+
+**Orientation.** NAIF's pck00011 (IAU 2015) gives the poles, prime meridians and radii.
+Mars's model has slow periodic terms of 0.42° (pole RA), 1.59° (pole declination) and 0.58°
+(meridian) that are effectively constants today. Leaving them out would tilt Mars by 1.5°.
+JPL Horizons reports sub-observer longitudes west-positive for prograde rotators and
+east-positive for retrograde ones (stated in each output's footer).
+
+**Maps.** The USGS Astrogeology planetary WMS serves one global simple-cylindrical image
+per body with CORS `*`. A 2 048 × 1 024 JPEG takes 1.3–1.7 s (220–510 KB); 4 096 × 2 048
+takes 2.4 s (1.5–2 MB). Its layer abstracts settle what each map is:
+- Uranus and Neptune "simulated global mosaics" were painted by hand, so they are not used.
+- The Sun layer is a texture from Solar System Scope, so it is not used.
+- Saturn's map is Björn Jónsson's work from Cassini and Voyager images. His terms page is
+  gone, so it waits for clarification.
+
+NASA Trek's tiles also answer browsers and go much deeper. They are the route to close-up
+detail later.
+
+**Rendering limits found.** Cesium's labels garble once they are more than about 10¹² m
+from the camera, so names are drawn on the line of sight near the camera. Changing a
+`PolylineCollection`'s model matrix rebuilds its vertex arrays, so orbits are primitives,
+whose model matrix is a uniform.
+
 ## 6. Rendering engine
 
 | | CesiumJS | MapLibre GL JS | Three.js |

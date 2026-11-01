@@ -14,7 +14,8 @@ export type ProviderCategory =
   | 'earthquakes'
   | 'weather'
   | 'elevation'
-  | 'geocoding';
+  | 'geocoding'
+  | 'planetary';
 
 export type Capability =
   | 'terrain-heightmap'
@@ -23,9 +24,12 @@ export type Capability =
   | 'point-elevation'
   | 'feature-feed'
   | 'point-weather'
-  | 'geocode';
+  | 'geocode'
+  | 'planetary-map'
+  | 'ephemeris';
 
-export type Protocol = 'xyz' | 'wmts-rest' | 'wms' | 'geojson' | 'json-rest' | 'mvt';
+/** 'bundled': published values compiled into the app; nothing is fetched at run time. */
+export type Protocol = 'xyz' | 'wmts-rest' | 'wms' | 'geojson' | 'json-rest' | 'mvt' | 'bundled';
 
 export type ProviderStatus = 'integrated' | 'optional' | 'future' | 'rejected';
 
