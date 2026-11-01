@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Continuum</title>
+    <meta
+      name="description"
+      content="Explore the Earth in 3D with real public data: terrain, satellite imagery, bathymetry and natural events — in the browser, without accounts or keys."
+    />
+    <meta name="theme-color" content="#0b1014" />
+    <link rel="icon" type="image/svg+xml" href="/branding/continuum-mark.svg" />
+    <meta property="og:title" content="Continuum" />
+    <meta
+      property="og:description"
+      content="A 3D Earth built from real public data, explorable at every scale."
+    />
+    <meta
+      property="og:image"
+      content="https://continuum.harithkavish.com/branding/social-preview.png"
+    />
+    <!-- Shared design system (foundations, shell, theme). Read from its home, never copied here. -->
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/styles.css" />
+    <script src="https://harithkavish.com/design-system/v1.0.0/harith-store.js"></script>
+    <script>
+      // Continuum is dark by default when the reader has no ecosystem theme preference.
+      // A stored preference is always honoured, and this default is never persisted.
+      // Declared in GOVERNANCE.md.
+      (function () {
+        try {
+          var saved = window.HarithStore
+            ? window.HarithStore.get('theme')
+            : localStorage.getItem('hk.theme');
+          if (saved !== 'light' && saved !== 'dark') {
+            window.__continuumDefaultTheme = 'dark';
+          }
+        } catch (e) {
+          window.__continuumDefaultTheme = 'dark';
+        }
+      })();
+    </script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/theme-toggle.js"></script>
+    <script>
+      if (window.__continuumDefaultTheme && window.HarithTheme)
+        window.HarithTheme.apply('dark', false);
+    </script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/harith-shell.js" defer></script>
+  </head>
+  <body>
+    <harith-header
+      site-title="Continuum"
+      site-tagline="The Earth, from real data."
+      brand-href="/"
+      brand-mark="/branding/continuum-mark.svg"
+      nav-links='[{"label":"Sources","action":"sources"},{"label":"Controls","action":"controls"},{"label":"About","action":"about"},{"label":"Harith Kavish","href":"https://harithkavish.com/"}]'
+    ></harith-header>
+    <noscript>
+      <p class="noscript">
+        Continuum is an interactive 3D application and needs JavaScript and WebGL.
+      </p>
+    </noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
