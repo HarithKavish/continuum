@@ -7,6 +7,7 @@ import { VectorTile } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { PMTiles } from 'pmtiles';
 import { z } from 'zod';
+import { cachedLoad, LruCache } from '../../core/net/LruCache';
 import { RequestQueue } from '../../core/net/RequestQueue';
 import { fetchJson } from '../base/http';
 
@@ -37,33 +38,18 @@ export async function overtureRelease(): Promise<string> {
 }
 
 // Zoom-14 tiles run to ~2 MB in dense places, so only a few are kept.
-const CACHE_SIZE = 12;
 const queue = new RequestQueue('overture', 4);
-const cache = new Map<string, VectorTile | null>();
-
-function remember(key: string, tile: VectorTile | null): void {
-  cache.delete(key);
-  cache.set(key, tile);
-  if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
-}
+const cache = new LruCache<VectorTile | null>(12);
 
 /** The decoded tile, or null where the archive has none. */
-export async function fetchBuildingFootprints(
+export function fetchBuildingFootprints(
   z: number,
   x: number,
   y: number,
 ): Promise<VectorTile | null> {
-  const key = `${z}/${x}/${y}`;
-  if (cache.has(key)) {
-    const tile = cache.get(key)!;
-    remember(key, tile);
-    return tile;
-  }
-  return queue.enqueue(key, async (signal) => {
+  return cachedLoad(cache, queue, `${z}/${x}/${y}`, async (signal) => {
     const { pmtiles } = await openArchive();
     const response = await pmtiles.getZxy(z, x, y, signal);
-    const tile = response ? new VectorTile(new PbfReader(new Uint8Array(response.data))) : null;
-    remember(key, tile);
-    return tile;
+    return response ? new VectorTile(new PbfReader(new Uint8Array(response.data))) : null;
   });
 }
