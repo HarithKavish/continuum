@@ -76,97 +76,150 @@ interface DecodedBuildings {
   /** Outer and inner rings, with each footprint's bounding box for culling. */
   shapes: { rings: { x: number; y: number }[][]; box: [number, number, number, number] }[];
 }
+/** The decoded value for a tile, built once and kept as long as the tile is. */
+function memo<T>(cache: WeakMap<VectorTile, T>, tile: VectorTile, build: () => T): T {
+  let value = cache.get(tile);
+  if (value === undefined) {
+    value = build();
+    cache.set(tile, value);
+  }
+  return value;
+}
+
 const boundaryCache = new WeakMap<VectorTile, DecodedBoundaries>();
 const placeCache = new WeakMap<VectorTile, DecodedPlaces>();
 const roadCache = new WeakMap<VectorTile, DecodedRoads>();
 const buildingCache = new WeakMap<VectorTile, DecodedBuildings>();
 
 function decodeBoundaries(tile: VectorTile): DecodedBoundaries {
-  let decoded = boundaryCache.get(tile);
-  if (decoded) return decoded;
-  const layer = tile.layers['boundary'];
-  decoded = { extent: layer?.extent ?? 4096, lines: [] };
-  for (let i = 0; layer && i < layer.length; i++) {
-    const f = layer.feature(i);
-    if (isTrue(f.properties['maritime'])) continue; // maritime limits are not drawn
-    decoded.lines.push({
-      adminLevel: Number(f.properties['admin_level'] ?? 99),
-      disputed: isTrue(f.properties['disputed']),
-      rings: f.loadGeometry(),
-    });
-  }
-  boundaryCache.set(tile, decoded);
-  return decoded;
+  return memo(boundaryCache, tile, () => {
+    const layer = tile.layers['boundary'];
+    const decoded: DecodedBoundaries = { extent: layer?.extent ?? 4096, lines: [] };
+    for (let i = 0; layer && i < layer.length; i++) {
+      const f = layer.feature(i);
+      if (isTrue(f.properties['maritime'])) continue; // maritime limits are not drawn
+      decoded.lines.push({
+        adminLevel: Number(f.properties['admin_level'] ?? 99),
+        disputed: isTrue(f.properties['disputed']),
+        rings: f.loadGeometry(),
+      });
+    }
+    return decoded;
+  });
 }
 
 function decodePlaces(tile: VectorTile): DecodedPlaces {
-  let decoded = placeCache.get(tile);
-  if (decoded) return decoded;
-  const layer = tile.layers['place'];
-  decoded = { extent: layer?.extent ?? 4096, places: [] };
-  for (let i = 0; layer && i < layer.length; i++) {
-    const f = layer.feature(i);
-    const name = placeName(f.properties);
-    const point = f.loadGeometry()[0]?.[0];
-    if (!name || !point) continue;
-    decoded.places.push({
-      cls: String(f.properties['class'] ?? ''),
-      rank: Number(f.properties['rank'] ?? 999),
-      name,
-      x: point.x,
-      y: point.y,
-    });
-  }
-  placeCache.set(tile, decoded);
-  return decoded;
+  return memo(placeCache, tile, () => {
+    const layer = tile.layers['place'];
+    const decoded: DecodedPlaces = { extent: layer?.extent ?? 4096, places: [] };
+    for (let i = 0; layer && i < layer.length; i++) {
+      const f = layer.feature(i);
+      const name = placeName(f.properties);
+      const point = f.loadGeometry()[0]?.[0];
+      if (!name || !point) continue;
+      decoded.places.push({
+        cls: String(f.properties['class'] ?? ''),
+        rank: Number(f.properties['rank'] ?? 999),
+        name,
+        x: point.x,
+        y: point.y,
+      });
+    }
+    return decoded;
+  });
 }
 
 function decodeRoads(tile: VectorTile): DecodedRoads {
-  let decoded = roadCache.get(tile);
-  if (decoded) return decoded;
-  const layer = tile.layers['transportation'];
-  const names = tile.layers['transportation_name'];
-  decoded = { extent: layer?.extent ?? 4096, lines: [], names: [] };
-  for (let i = 0; layer && i < layer.length; i++) {
-    const f = layer.feature(i);
-    if (f.type !== 2) continue; // lines only; piers and bridges also come as areas
-    decoded.lines.push({
-      cls: String(f.properties['class'] ?? ''),
-      tunnel: f.properties['brunnel'] === 'tunnel',
-      rings: f.loadGeometry(),
-    });
-  }
-  for (let i = 0; names && i < names.length; i++) {
-    const f = names.feature(i);
-    const name = placeName(f.properties) || String(f.properties['ref'] ?? '').trim();
-    if (f.type !== 2 || !name) continue;
-    decoded.names.push({ cls: String(f.properties['class'] ?? ''), name, rings: f.loadGeometry() });
-  }
-  roadCache.set(tile, decoded);
-  return decoded;
+  return memo(roadCache, tile, () => {
+    const layer = tile.layers['transportation'];
+    const names = tile.layers['transportation_name'];
+    const decoded: DecodedRoads = { extent: layer?.extent ?? 4096, lines: [], names: [] };
+    for (let i = 0; layer && i < layer.length; i++) {
+      const f = layer.feature(i);
+      if (f.type !== 2) continue; // lines only; piers and bridges also come as areas
+      decoded.lines.push({
+        cls: String(f.properties['class'] ?? ''),
+        tunnel: f.properties['brunnel'] === 'tunnel',
+        rings: f.loadGeometry(),
+      });
+    }
+    for (let i = 0; names && i < names.length; i++) {
+      const f = names.feature(i);
+      const name = placeName(f.properties) || String(f.properties['ref'] ?? '').trim();
+      if (f.type !== 2 || !name) continue;
+      decoded.names.push({
+        cls: String(f.properties['class'] ?? ''),
+        name,
+        rings: f.loadGeometry(),
+      });
+    }
+    return decoded;
+  });
 }
 
 function decodeBuildings(tile: VectorTile): DecodedBuildings {
-  let decoded = buildingCache.get(tile);
-  if (decoded) return decoded;
-  const layer = tile.layers['building'];
-  decoded = { extent: layer?.extent ?? 4096, shapes: [] };
-  for (let i = 0; layer && i < layer.length; i++) {
-    const f = layer.feature(i);
-    if (f.type !== 3 || isTrue(f.properties['is_underground'])) continue;
-    const rings = f.loadGeometry();
-    const box: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity];
-    for (const ring of rings)
-      for (const p of ring) {
-        box[0] = Math.min(box[0], p.x);
-        box[1] = Math.min(box[1], p.y);
-        box[2] = Math.max(box[2], p.x);
-        box[3] = Math.max(box[3], p.y);
-      }
-    decoded.shapes.push({ rings, box });
+  return memo(buildingCache, tile, () => {
+    const layer = tile.layers['building'];
+    const decoded: DecodedBuildings = { extent: layer?.extent ?? 4096, shapes: [] };
+    for (let i = 0; layer && i < layer.length; i++) {
+      const f = layer.feature(i);
+      if (f.type !== 3 || isTrue(f.properties['is_underground'])) continue;
+      const rings = f.loadGeometry();
+      const box: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const ring of rings)
+        for (const p of ring) {
+          box[0] = Math.min(box[0], p.x);
+          box[1] = Math.min(box[1], p.y);
+          box[2] = Math.max(box[2], p.x);
+          box[3] = Math.max(box[3], p.y);
+        }
+      decoded.shapes.push({ rings, box });
+    }
+    return decoded;
+  });
+}
+
+type Ring = { x: number; y: number }[];
+type Project = (x: number, y: number) => [number, number];
+
+/** Add rings to the current path, in canvas pixels. */
+function traceRings(
+  ctx: CanvasRenderingContext2D,
+  rings: Ring[],
+  project: Project,
+  close = false,
+): void {
+  for (const ring of rings) {
+    ring.forEach((pt, j) => {
+      const [px, py] = project(pt.x, pt.y);
+      if (j === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    if (close) ctx.closePath();
   }
-  buildingCache.set(tile, decoded);
-  return decoded;
+}
+
+/** Stroke lines in two passes, every casing before any line, so crossings join cleanly. */
+function strokeLines(
+  ctx: CanvasRenderingContext2D,
+  lines: { style: LineStyle; rings: Ring[] }[],
+  project: Project,
+): void {
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  for (const pass of ['casing', 'line'] as const) {
+    for (const { style, rings } of lines) {
+      const stroke = pass === 'casing' ? style.casing : style;
+      if (!stroke) continue;
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.width * SCALE;
+      ctx.setLineDash(pass === 'line' && style.dash ? style.dash.map((d) => d * SCALE) : []);
+      ctx.beginPath();
+      traceRings(ctx, rings, project);
+      ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
 }
 
 const widths = new Map<string, number>();
@@ -261,27 +314,7 @@ export class VectorOverlayProvider {
     }
     // Minor roads first; every casing before any fill, so junctions join cleanly.
     lines.sort((a, b) => a.style.order - b.style.order);
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    for (const pass of ['casing', 'line'] as const) {
-      for (const { style, rings } of lines) {
-        const stroke = pass === 'casing' ? style.casing : style;
-        if (!stroke) continue;
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.width * SCALE;
-        ctx.setLineDash(pass === 'line' && style.dash ? style.dash.map((d) => d * SCALE) : []);
-        ctx.beginPath();
-        for (const ring of rings) {
-          ring.forEach((pt, j) => {
-            const [px, py] = project(pt.x, pt.y);
-            if (j === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-          });
-        }
-        ctx.stroke();
-      }
-    }
-    ctx.setLineDash([]);
+    strokeLines(ctx, lines, project);
     this.drawRoadNames(ctx, data, level, project);
   }
 
@@ -359,14 +392,7 @@ export class VectorOverlayProvider {
       const [l, t] = project(shape.box[0], shape.box[1]);
       const [r, b] = project(shape.box[2], shape.box[3]);
       if (r < 0 || b < 0 || l > PX || t > PX) continue;
-      for (const ring of shape.rings) {
-        ring.forEach((pt, j) => {
-          const [px, py] = project(pt.x, pt.y);
-          if (j === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.closePath();
-      }
+      traceRings(ctx, shape.rings, project, true);
     }
     ctx.fillStyle = style.fill;
     ctx.fill('evenodd');
@@ -390,26 +416,7 @@ export class VectorOverlayProvider {
     }
     // Widest (country) lines last, so they sit on top of state and district lines.
     lines.sort((a, b) => a.style.width - b.style.width);
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    for (const pass of ['casing', 'line'] as const) {
-      for (const { style, rings } of lines) {
-        const stroke = pass === 'casing' ? style.casing : style;
-        if (!stroke) continue;
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.width * SCALE;
-        ctx.setLineDash(pass === 'line' && style.dash ? style.dash.map((d) => d * SCALE) : []);
-        ctx.beginPath();
-        for (const ring of rings) {
-          ring.forEach((pt, j) => {
-            const [px, py] = project(pt.x, pt.y);
-            if (j === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-          });
-        }
-        ctx.stroke();
-      }
-    }
+    strokeLines(ctx, lines, project);
   }
 
   private drawPlaces(

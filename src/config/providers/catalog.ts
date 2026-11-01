@@ -54,6 +54,33 @@ const openFreeMapCommon = {
   status: 'integrated',
 } as const;
 
+type AerialShared =
+  | 'category'
+  | 'capabilities'
+  | 'authentication'
+  | 'cors'
+  | 'accuracy'
+  | 'verticalDatum'
+  | 'rateLimits'
+  | 'caching'
+  | 'status';
+
+/** A national aerial-photo service: open, browser-accessible, accuracy not stated. */
+function aerialPhotos(entry: Omit<ProviderMetadata, AerialShared>): ProviderMetadata {
+  return {
+    category: 'imagery',
+    capabilities: ['imagery-tiles'],
+    authentication: 'none',
+    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
+    accuracy: { horizontal: null, vertical: null, reference: null },
+    verticalDatum: null,
+    rateLimits: 'None published.',
+    caching: 'Provider cache headers.',
+    status: 'integrated',
+    ...entry,
+  };
+}
+
 export const PROVIDERS: ProviderMetadata[] = [
   {
     id: 'aws-terrain-tiles',
@@ -688,13 +715,11 @@ export const PROVIDERS: ProviderMetadata[] = [
     ],
     status: 'integrated',
   },
-  {
+  aerialPhotos({
     id: 'ign-orthophotos',
     name: 'Aerial photos of France (IGN)',
     organisation:
       'Institut national de l’information géographique et forestière (IGN), Géoplateforme',
-    category: 'imagery',
-    capabilities: ['imagery-tiles'],
     dataset: 'ORTHOIMAGERY.ORTHOPHOTOS (BD ORTHO)',
     description: 'National aerial orthophotography of metropolitan France.',
     documentationUrl: 'https://geoservices.ign.fr/services-web',
@@ -704,16 +729,12 @@ export const PROVIDERS: ProviderMetadata[] = [
       protocol: 'wmts-rest',
       format: 'JPEG tiles, EPSG:3857, zoom 0–19',
     },
-    authentication: 'none',
-    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
     coverage: {
       extent: 'regional',
       description:
         'Metropolitan France. Tiles beyond France come back pure white and are drawn as no data.',
     },
     resolution: 'BD ORTHO is a 20 cm product; the service goes to zoom 19 (~0.2 m pixels at 46°N).',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    verticalDatum: null,
     temporal: {
       kind: 'periodic',
       description:
@@ -728,17 +749,12 @@ export const PROVIDERS: ProviderMetadata[] = [
       short: 'Aerial photos: IGN (Géoplateforme)',
       full: 'Orthophotos © IGN, Géoplateforme, Licence Ouverte (Etalab).',
     },
-    rateLimits: 'None published.',
-    caching: 'Provider cache headers.',
     limitations: ['Shown from regional zoom inwards only, over metropolitan France.'],
-    status: 'integrated',
-  },
-  {
+  }),
+  aerialPhotos({
     id: 'pdok-luchtfoto',
     name: 'Aerial photos of the Netherlands (PDOK)',
     organisation: 'Beeldmateriaal Nederland, served by PDOK',
-    category: 'imagery',
-    capabilities: ['imagery-tiles'],
     dataset: 'Luchtfoto RGB, Actueel_orthoHR',
     description: 'National high-resolution aerial photography of the Netherlands, current year.',
     documentationUrl: 'https://www.pdok.nl/',
@@ -748,16 +764,12 @@ export const PROVIDERS: ProviderMetadata[] = [
       protocol: 'wmts-rest',
       format: 'JPEG tiles, EPSG:3857, zoom 0–21',
     },
-    authentication: 'none',
-    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
     coverage: {
       extent: 'regional',
       description:
         'The Netherlands. Tiles beyond it come back pure white and are drawn as no data.',
     },
     resolution: '8 cm in the web services (some areas captured at 5 cm).',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    verticalDatum: null,
     temporal: {
       kind: 'periodic',
       description: 'Flown annually; "Actueel" is the most recent year.',
@@ -767,17 +779,12 @@ export const PROVIDERS: ProviderMetadata[] = [
       short: 'Aerial photos: Beeldmateriaal Nederland (PDOK)',
       full: 'Luchtfoto © Beeldmateriaal Nederland, via PDOK, CC BY 4.0.',
     },
-    rateLimits: 'None published.',
-    caching: 'Provider cache headers.',
     limitations: ['Shown from regional zoom inwards only, over the Netherlands.'],
-    status: 'integrated',
-  },
-  {
+  }),
+  aerialPhotos({
     id: 'swisstopo-swissimage',
     name: 'Aerial photos of Switzerland (swisstopo SWISSIMAGE)',
     organisation: 'Federal Office of Topography swisstopo',
-    category: 'imagery',
-    capabilities: ['imagery-tiles'],
     dataset: 'ch.swisstopo.swissimage (current)',
     description: 'National aerial orthophoto mosaic of Switzerland.',
     documentationUrl: 'https://www.swisstopo.admin.ch/en/orthoimage-swissimage-10',
@@ -787,15 +794,11 @@ export const PROVIDERS: ProviderMetadata[] = [
       protocol: 'wmts-rest',
       format: 'JPEG tiles, EPSG:3857, zoom 0–20',
     },
-    authentication: 'none',
-    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
     coverage: {
       extent: 'regional',
       description: 'Switzerland, with imagery a little beyond its borders.',
     },
     resolution: 'SWISSIMAGE 10 cm product; the service goes to zoom 20.',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    verticalDatum: null,
     temporal: {
       kind: 'periodic',
       description: 'Renewed on swisstopo’s survey cycle; dates vary by area.',
@@ -809,17 +812,12 @@ export const PROVIDERS: ProviderMetadata[] = [
       short: 'Aerial photos: © swisstopo',
       full: 'SWISSIMAGE © Federal Office of Topography swisstopo.',
     },
-    rateLimits: 'None published.',
-    caching: 'Provider cache headers.',
     limitations: ['Shown from regional zoom inwards only, over Switzerland.'],
-    status: 'integrated',
-  },
-  {
+  }),
+  aerialPhotos({
     id: 'basemap-at-orthofoto',
     name: 'Aerial photos of Austria (basemap.at)',
     organisation: 'basemap.at (Austrian federal states and partners)',
-    category: 'imagery',
-    capabilities: ['imagery-tiles'],
     dataset: 'bmaporthofoto30cm',
     description: 'Aerial orthophoto mosaic of Austria.',
     documentationUrl: 'https://basemap.at/en/',
@@ -829,16 +827,12 @@ export const PROVIDERS: ProviderMetadata[] = [
       protocol: 'xyz',
       format: 'JPEG tiles, EPSG:3857, zoom 0–20',
     },
-    authentication: 'none',
-    cors: { verified: true, verifiedOn: VERIFIED, allowOrigin: '*' },
     coverage: {
       extent: 'regional',
       description: 'Austria. Tiles beyond it return 404 and are drawn as no data.',
     },
     resolution:
       'Not stated by the provider (the layer is named "30cm"); the service goes to zoom 20.',
-    accuracy: { horizontal: null, vertical: null, reference: null },
-    verticalDatum: null,
     temporal: { kind: 'periodic', description: 'Not stated per area.' },
     licence: {
       name: 'CC BY 4.0 (Open Government Data Austria)',
@@ -848,11 +842,8 @@ export const PROVIDERS: ProviderMetadata[] = [
       short: 'Aerial photos: basemap.at',
       full: 'Data source: basemap.at (CC BY 4.0).',
     },
-    rateLimits: 'None published.',
-    caching: 'Provider cache headers.',
     limitations: ['Shown from regional zoom inwards only, over Austria.'],
-    status: 'integrated',
-  },
+  }),
   {
     ...openFreeMapCommon,
     id: 'openfreemap-buildings',

@@ -110,7 +110,7 @@ export function tileForSample(
  * integer + 0.5; coordinates are clamped to the tile, so callers handle cross-tile seams.
  */
 export function sampleBilinear(
-  heights: Float32Array,
+  heights: ArrayLike<number>,
   size: number,
   px: number,
   py: number,
@@ -241,7 +241,7 @@ function ancestorSample(
   py: number,
   ancestor: Float32Array,
   ancestorAddress: TileAddress,
-  sample = sampleBilinear,
+  sample: (heights: Float32Array, size: number, px: number, py: number) => number = sampleBilinear,
 ): number {
   const size = TERRARIUM_TILE_SIZE;
   const scale = 2 ** (child.z - ancestorAddress.z);

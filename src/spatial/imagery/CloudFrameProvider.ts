@@ -5,7 +5,7 @@
 
 import { Event, WebMercatorTilingScheme, type Credit } from 'cesium';
 import { RequestQueue } from '../../core/net/RequestQueue';
-import { tileXToLon } from '../terrain/terrarium';
+import { sampleBilinear, tileXToLon } from '../terrain/terrarium';
 import {
   cloudOpacity,
   eumetsatTemperature,
@@ -43,7 +43,7 @@ function sourceUrl(source: CloudSource, time: string, x: number, y: number, z: n
 // Decoded source tiles, one byte of opacity per pixel (64 KB each): a coarse Meteosat tile
 // serves every deeper tile under it, and every frame of the loop is redrawn as the view moves.
 const CACHE_SIZE = 400;
-const cache = new Map<string, Uint8Array | null>();
+const cache = new Map<string, Uint8Array>();
 
 /** A source tile decoded to cloud opacity (0–255) per pixel, or null where it has none. */
 async function sourceOpacity(
@@ -61,7 +61,11 @@ async function sourceOpacity(
     url,
     async (signal) => {
       const response = await fetch(url, { signal, mode: 'cors', credentials: 'omit' });
-      if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) return null;
+      // A failed request is not an absence of cloud: throw, so the imagery layer retries
+      // the tile, and cache nothing. A WMS exception (a time not yet published) means no
+      // data for now, and is not cached either.
+      if (!response.ok) throw new Error(`Cloud tile: HTTP ${response.status}`);
+      if (!response.headers.get('content-type')?.startsWith('image/')) return null;
       const bitmap = await createImageBitmap(await response.blob());
       const canvas = Object.assign(document.createElement('canvas'), {
         width: TILE,
@@ -87,25 +91,11 @@ async function sourceOpacity(
     },
     priority,
   );
-  cache.set(url, grid);
-  if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
+  if (grid) {
+    cache.set(url, grid);
+    if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
+  }
   return grid;
-}
-
-/** Bilinear sample of a TILE×TILE grid at fractional pixel coordinates. */
-function sample(grid: Uint8Array, u: number, v: number): number {
-  const fx = Math.max(0, Math.min(TILE - 1, u - 0.5));
-  const fy = Math.max(0, Math.min(TILE - 1, v - 0.5));
-  const x0 = Math.floor(fx);
-  const y0 = Math.floor(fy);
-  const x1 = Math.min(TILE - 1, x0 + 1);
-  const y1 = Math.min(TILE - 1, y0 + 1);
-  const tx = fx - x0;
-  const ty = fy - y0;
-  return (
-    (grid[y0 * TILE + x0]! * (1 - tx) + grid[y0 * TILE + x1]! * tx) * (1 - ty) +
-    (grid[y1 * TILE + x0]! * (1 - tx) + grid[y1 * TILE + x1]! * tx) * ty
-  );
 }
 
 export class CloudFrameProvider {
@@ -187,7 +177,7 @@ export class CloudFrameProvider {
         out.data[i + 3] =
           source.scale === 1
             ? source.grid[py * TILE + px]!
-            : sample(source.grid, u, (source.oy + py + 0.5) / source.scale);
+            : sampleBilinear(source.grid, TILE, u, (source.oy + py + 0.5) / source.scale);
       }
     }
     ctx.putImageData(out, 0, 0);
