@@ -74,8 +74,9 @@ validated on load; a malformed profile falls back to defaults.
 
 Browsers reveal a controller only after its first button press. `gamepadconnected` and
 `gamepaddisconnected` refresh the list; the active controller is re-read every frame, so a
-disconnect simply produces no input — nothing throws. The status bar shows *None*,
-*Connected* or *Paused*. Non-standard mappings are reported with a prompt to rebind.
+disconnect simply produces no input — nothing throws. While a controller is connected the
+status bar shows a *Controller* (or *Controller paused*) button, which opens the controls.
+Non-standard mappings are reported with a prompt to rebind.
 
 The Gamepad API exposes state, not events: button presses are detected as edges between
 polls. A press shorter than one frame cannot be seen — at normal frame rates this is

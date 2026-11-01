@@ -13,7 +13,7 @@ static host ───► │  Engine (Cesium Viewer) ── frame loop: input �
 (HTML/JS/CSS,    │    ├─ TerrariumTerrainProvider ◄─ TerrariumTileSource ─┼──┼──► s3.amazonaws.com
  Cesium assets,  │    ├─ ImageryManager ─────────────────────────────────┼──┼──► EOX, NASA GIBS, USGS, GEBCO
  geoid grid)     │    ├─ FeedLayers (pollers) ────────────────────────────┼──┼──► USGS, NASA EONET
-                 │    ├─ BuildingsLayer ──────────────────────────────────┼──┼──► OpenFreeMap
+                 │    ├─ BuildingsLayer, VectorOverlayProvider ───────────┼──┼──► OpenFreeMap
                  │    └─ MeasureLayer                                     │  │
                  │  inspection.ts ── point elevation / weather adapters ──┼──┼──► Open-Meteo, USGS EPQS, NOAA
                  │  SearchBox ── coordinate parser / Nominatim ───────────┘  │──► nominatim.openstreetmap.org
@@ -77,6 +77,14 @@ Cesium objects: components read stores and call engine methods.
   failures are retried, a 404 (no data for that date) becomes a transparent tile at once,
   and a tile that still fails becomes transparent and is counted. Without this, Cesium
   abandons a failed tile for the rest of the session.
+- **Borders and place names.** `VectorOverlayProvider` is a Cesium imagery provider that
+  draws OpenFreeMap vector tiles (OpenMapTiles `boundary` and `place` layers) into
+  transparent tiles. Each imagery level is drawn from that zoom's data (zoom 2 is skipped
+  for its ~1.1 MB tiles; beyond zoom 14 the zoom-14 tile is drawn larger), so detail is
+  added and names thin out or fill in as the camera moves, at a constant text size. Labels
+  are decluttered by priority, considering candidates up to half a tile beyond each edge so
+  neighbouring tiles agree. Each vector tile is fetched once through a bounded queue and
+  decoded once, in memory only.
 
 ## Terrain pipeline
 
@@ -137,8 +145,7 @@ the live shared system, and pinning a hash would break Continuum on each release
 | Idle cost | No rendering; feeds paused when the tab is hidden |
 
 Low-performance mode lowers the resolution scale, uses coarser terrain
-(`maximumScreenSpaceError` 4) and disables MSAA. The status bar shows rendered frames per
-second (zero when idle, by design) and the JavaScript heap where the browser exposes it.
+(`maximumScreenSpaceError` 4) and disables MSAA.
 
 ## Extending beyond Earth
 

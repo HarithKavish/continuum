@@ -20,7 +20,12 @@
       content="https://continuum.harithkavish.com/branding/social-preview.png"
     />
     <!-- Shared design system (foundations, shell, theme). Read from its home, never copied here. -->
-    <link rel="stylesheet" href="https://harithkavish.com/design-system/styles.css" />
+    <!-- The same v1.0.0 stylesheets as the sibling sites: components.css carries the shell's
+         account menu and avatar styles, which the unversioned styles.css does not. -->
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/tokens.css" />
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/base.css" />
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/components.css" />
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/utils.css" />
     <script src="https://harithkavish.com/design-system/v1.0.0/harith-store.js"></script>
     <script>
       // Continuum is dark by default when the reader has no ecosystem theme preference.

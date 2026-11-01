@@ -44,8 +44,9 @@ Article 10. Each states what it deviates from, why, and what would end it.
    *Ends when:* the design system has an application-shell variant with a compact footer.
 3. **Local data-encoding colours** (`src/spatial/rendering/palettes.ts`, the flood
    legend colours copied from the GIBS colour map) and literal colours for
-   elements drawn over imagery or space (the black scene background, the white crosshair
-   and the credit text's shadow).
+   elements drawn over imagery or space: the black scene background, the white crosshair,
+   and the border and place-name colours drawn into imagery tiles
+   (`src/spatial/imagery/vectorStyle.ts`).
    *Why:* these encode measured quantities or must stay legible over arbitrary imagery in
    both themes; the design system has no data-visualisation palette or over-imagery tokens.
    Interface chrome uses the shared tokens only.
@@ -54,3 +55,9 @@ Article 10. Each states what it deviates from, why, and what would end it.
    *Why:* a standalone SVG used as favicon and brand mark cannot read CSS tokens; its
    colours are the design system's dark field and accent values.
    *Ends when:* the design system defines a pattern for per-surface marks.
+5. **Header action buttons reset locally** (`button.site-nav__link` in `src/styles/app.css`).
+   *Deviates from:* using the shared `.site-nav__link` styles unchanged.
+   *Why:* the header's Sources, Controls and About items open dialogs, so the shell renders
+   them as buttons. The design system styles `.site-nav__link` for links and leaves
+   buttons with the browser's grey fill. The local rule only clears that fill.
+   *Ends when:* the design system resets button backgrounds in `.site-nav__link`.

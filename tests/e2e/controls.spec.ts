@@ -24,14 +24,15 @@ test.describe('gamepad', () => {
   test('is detected, and disconnecting it is harmless', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    const status = page.getByRole('button', { name: /Controller/ });
-    await expect(status).toContainText('None');
+    // The status bar shows a controller button only while one is connected.
+    const status = page.getByRole('button', { name: /^Controller/ });
+    await expect(status).toHaveCount(0);
     await padConnect(page);
-    await expect(status).toContainText('Connected');
+    await expect(status).toHaveAccessibleName(/^Controller connected/);
     await padAxes(page, [0, -1, 0, 0]);
     await page.waitForTimeout(300);
     await padConnect(page, false);
-    await expect(status).toContainText('None');
+    await expect(status).toHaveCount(0);
     await page.waitForTimeout(500);
     expect(errors).toEqual([]);
   });
@@ -111,10 +112,11 @@ test.describe('gamepad', () => {
     await padTap(page, 1); // B
     await expect(page.getByTestId('point-inspection')).toBeHidden();
 
+    const speed = page.locator('.statusbar__item', { hasText: 'Speed' });
     await padTap(page, 5); // RB
-    await expect(page.locator('.statusbar__item', { hasText: 'Speed' })).toContainText('×2');
-    await padTap(page, 4); // LB
-    await expect(page.locator('.statusbar__item', { hasText: 'Speed' })).toContainText('×1');
+    await expect(speed).toContainText('×2');
+    await padTap(page, 4); // LB: back to ×1, which needs no readout
+    await expect(speed).toHaveCount(0);
 
     await padAxes(page, [0, 0, 1, 0]);
     await page.waitForTimeout(800);
@@ -123,7 +125,9 @@ test.describe('gamepad', () => {
     await expect.poll(() => headingNearNorth(page), { timeout: 30_000 }).toBeLessThan(2);
 
     await padTap(page, 9); // Start: pause
-    await expect(page.getByRole('button', { name: /Controller/ })).toContainText('Paused');
+    await expect(page.getByRole('button', { name: /^Controller/ })).toHaveAccessibleName(
+      /^Controller paused/,
+    );
     const before = await camera(page);
     await padAxes(page, [0, -1, 0, 0]);
     await page.waitForTimeout(1000);
@@ -131,7 +135,9 @@ test.describe('gamepad', () => {
     const after = await camera(page);
     expect(Math.abs(after.lat - before.lat)).toBeLessThan(1e-9);
     await padTap(page, 9); // resume
-    await expect(page.getByRole('button', { name: /Controller/ })).toContainText('Connected');
+    await expect(page.getByRole('button', { name: /^Controller/ })).toHaveAccessibleName(
+      /^Controller connected/,
+    );
   });
 
   test('X toggles the information panel', async ({ page }) => {
@@ -144,7 +150,7 @@ test.describe('gamepad', () => {
 
   test('controls can be rebound and survive a reload', async ({ page }) => {
     await padConnect(page);
-    await page.getByRole('button', { name: /Controller/ }).click();
+    await page.getByRole('button', { name: /^Controller/ }).click();
     await page.getByRole('tab', { name: 'Controller setup' }).click();
     const row = page.locator('tr', { hasText: 'Select location' });
     await row.getByRole('button', { name: 'Rebind' }).click();

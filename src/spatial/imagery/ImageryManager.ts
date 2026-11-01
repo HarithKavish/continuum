@@ -16,6 +16,7 @@ import {
 } from 'cesium';
 import { providerById } from '../../config/providers/catalog';
 import { IMAGERY_LAYERS, type ImageryLayerDefinition } from '../../config/providers/layers';
+import { VectorOverlayProvider } from './VectorOverlayProvider';
 
 export interface ImageryState {
   baseLayer: string;
@@ -103,6 +104,15 @@ export class ImageryManager {
     const meta = providerById(def.providerId);
     // showOnScreen: attribution must be visible on the map, not tucked into a lightbox.
     const credit = new Credit(meta.attribution.short, true);
+    if (def.kind === 'vector') {
+      const vector = new VectorOverlayProvider(
+        def.providerId,
+        def.vectorStyle ?? 'boundaries',
+        credit,
+      ) as unknown as ImageryProvider;
+      this.makeResilient(vector);
+      return vector;
+    }
     const tilingScheme =
       def.tiling === 'geographic' ? new GeographicTilingScheme() : new WebMercatorTilingScheme();
     const provider: ImageryProvider =

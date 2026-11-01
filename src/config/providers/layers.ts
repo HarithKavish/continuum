@@ -10,9 +10,11 @@ export interface ImageryLayerDefinition {
   /** Group shown in the layer panel. */
   group:
     'Satellite imagery' | 'Geographic features' | 'Hydrology' | 'Bathymetry and ocean' | 'Weather';
-  kind: 'xyz' | 'wms';
+  kind: 'xyz' | 'wms' | 'vector';
   /** URL template; {date} is substituted with the selected UTC date (YYYY-MM-DD). */
   url: string;
+  /** For kind 'vector': which OpenMapTiles layer is drawn (VectorOverlayProvider). */
+  vectorStyle?: 'boundaries' | 'places';
   tiling: 'geographic' | 'mercator';
   minimumLevel?: number;
   /** Deepest level requested; Cesium upsamples beyond it rather than requesting more. */
@@ -105,28 +107,32 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
     hint: 'United States only.',
   },
   {
-    providerId: 'gibs-reference-labels',
+    providerId: 'openfreemap-boundaries',
     role: 'overlay',
-    label: 'Place labels',
+    label: 'Borders',
     group: 'Geographic features',
-    kind: 'xyz',
-    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+    kind: 'vector',
+    vectorStyle: 'boundaries',
+    url: 'https://tiles.openfreemap.org/planet',
     tiling: 'mercator',
-    maximumLevel: 9,
+    maximumLevel: 19,
     dated: false,
     defaultOpacity: 1,
+    hint: 'Countries; states from continental scale; districts from regional scale.',
   },
   {
-    providerId: 'gibs-reference-features',
+    providerId: 'openfreemap-places',
     role: 'overlay',
-    label: 'Roads and boundaries',
+    label: 'Place names',
     group: 'Geographic features',
-    kind: 'xyz',
-    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Features/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
+    kind: 'vector',
+    vectorStyle: 'places',
+    url: 'https://tiles.openfreemap.org/planet',
     tiling: 'mercator',
-    maximumLevel: 9,
+    maximumLevel: 19,
     dated: false,
-    defaultOpacity: 0.85,
+    defaultOpacity: 1,
+    hint: 'Fewer, larger places from afar; towns, villages and neighbourhoods as you zoom in.',
   },
   {
     providerId: 'gibs-coastlines',
@@ -214,7 +220,13 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
 ];
 
 export const DEFAULT_BASE_LAYER = 'eox-s2cloudless';
-export const DEFAULT_OVERLAYS = ['gibs-reference-labels'];
+export const DEFAULT_OVERLAYS = ['openfreemap-boundaries', 'openfreemap-places'];
+
+/** Overlays that replaced earlier ones, so a reader's saved choice carries over. */
+export const REPLACED_OVERLAYS: Record<string, string[]> = {
+  'gibs-reference-labels': ['openfreemap-boundaries', 'openfreemap-places'],
+  'gibs-reference-features': ['openfreemap-boundaries'],
+};
 
 export function layerDefinition(providerId: string): ImageryLayerDefinition {
   const def = IMAGERY_LAYERS.find((l) => l.providerId === providerId);
