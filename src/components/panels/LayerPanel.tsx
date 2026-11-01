@@ -16,6 +16,7 @@ import { DEPTH_CLASSES, EVENT_COLORS } from '../../spatial/rendering/palettes';
 import { mercatorPixelSpacingMeters } from '../../spatial/terrain/terrarium';
 import { relativeTime, Section, Slider, Status, Toggle } from '../common/ui';
 import { SearchBox } from './SearchBox';
+import { SolarSystemSection } from './SolarSystemSection';
 import type { FeedState } from '../../core/state/appState';
 
 const GROUPS: ImageryLayerDefinition['group'][] = [
@@ -43,6 +44,7 @@ export function LayerPanel() {
       </button>
       <div id="layer-panel" className="panel-body" hidden={!open}>
         <SearchBox />
+        <SolarSystemSection />
         <TerrainSection />
         <ImagerySection />
         {GROUPS.map((g) => (

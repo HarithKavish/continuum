@@ -141,6 +141,20 @@ const probes = [
     'integrated',
   ],
   ['fetch', 'openfreemap-tilejson', 'https://tiles.openfreemap.org/planet', 'integrated'],
+  // Planetary maps: one global image per body, read back from a canvas as the app does.
+  ...[
+    ['mercury/mercury', 'MESSENGER'],
+    ['venus/venus', 'MAGELLAN_color'],
+    ['earth/moon', 'LROC_WAC'],
+    ['mars/mars', 'MDIM21_color'],
+    ['jupiter/jupiter', 'CASSINI'],
+    ['pluto/pluto', 'NEWHORIZONS_PLUTO_MOSAIC'],
+  ].map(([map, layer]) => [
+    'img',
+    `usgs-planetary-${layer}`,
+    `https://planetarymaps.usgs.gov/cgi-bin/mapserv?map=/maps/${map}_simp_cyl.map&service=WMS&version=1.1.1&request=GetMap&layers=${layer}&styles=&srs=EPSG:4326&bbox=-180,-90,180,90&width=512&height=256&format=image/jpeg`,
+    'integrated',
+  ]),
   // Building footprints, live clouds and national aerial photos
   ['fetch', 'overture-stac-catalog', 'https://stac.overturemaps.org/catalog.json', 'integrated'],
   [

@@ -53,8 +53,9 @@ export function SourcesDialog() {
               </Row>
               <Row label="Attribution">{p.attribution.full}</Row>
               <Row label="Access">
-                {p.endpoint.protocol.toUpperCase()} · {p.endpoint.format} · no authentication · CORS
-                verified {p.cors.verifiedOn}
+                {p.endpoint.protocol === 'bundled'
+                  ? `${p.endpoint.format}: nothing is fetched while you browse`
+                  : `${p.endpoint.protocol.toUpperCase()} · ${p.endpoint.format} · no authentication · CORS verified ${p.cors.verifiedOn}`}
               </Row>
               <Row label="Rate limits">{p.rateLimits}</Row>
               <Row label="Caching">{p.caching}</Row>
