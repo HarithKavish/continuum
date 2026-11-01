@@ -95,6 +95,7 @@ imperceptible; it matters only on very slow renderers.
 | Esc | Back |
 | H | Recentre |
 | I | Toggle the information panel |
+| L | Realistic day and night / full daylight |
 
 Keys are ignored while typing in a field.
 

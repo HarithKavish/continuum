@@ -37,6 +37,7 @@ export const KEYBOARD_GUIDE: [string, string][] = [
   ['Esc', 'Back / clear selection'],
   ['H', 'Recentre: north up, look down'],
   ['I', 'Toggle information panel'],
+  ['L', 'Realistic day and night / full daylight'],
 ];
 
 function isTyping(target: EventTarget | null): boolean {
@@ -52,7 +53,9 @@ export class KeyboardInput {
 
   constructor(
     private readonly target: HTMLElement | Window,
-    private readonly onAction: (action: 'select' | 'back' | 'recenter' | 'togglePanel') => void,
+    private readonly onAction: (
+      action: 'select' | 'back' | 'recenter' | 'togglePanel' | 'toggleLighting',
+    ) => void,
   ) {
     target.addEventListener('keydown', this.onKeyDown as EventListener);
     target.addEventListener('keyup', this.onKeyUp as EventListener);
@@ -85,6 +88,7 @@ export class KeyboardInput {
     else if (e.code === 'Escape') this.onAction('back');
     else if (e.code === 'KeyH') this.onAction('recenter');
     else if (e.code === 'KeyI') this.onAction('togglePanel');
+    else if (e.code === 'KeyL') this.onAction('toggleLighting');
     else return;
     e.preventDefault();
   };

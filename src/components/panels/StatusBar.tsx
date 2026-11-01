@@ -1,6 +1,13 @@
 import type { RefObject } from 'react';
 import { useEngine } from '../../app/EngineContext';
-import { uiStore, useCamera, useGamepad, useStatus } from '../../core/state/hooks';
+import {
+  layersStore,
+  uiStore,
+  useCamera,
+  useGamepad,
+  useLayers,
+  useStatus,
+} from '../../core/state/hooks';
 import { formatAltitude, formatLatLon } from '../../spatial/coordinates/coordinates';
 import { Toolbar } from '../controls/Toolbar';
 
@@ -25,6 +32,7 @@ export function StatusBar({ creditsRef }: { creditsRef: RefObject<HTMLDivElement
     imageryErrors: s.imageryErrors,
   }));
   const pad = useGamepad((s) => ({ pads: s.pads, activeIndex: s.activeIndex, paused: s.paused }));
+  const lighting = useLayers((s) => s.lighting);
   const loading = status.terrain.inFlight + status.terrain.queued > 0 || !status.tilesLoaded;
   const errors = status.terrain.failed + status.imageryErrors;
   const activePad = pad.pads.find((p) => p.index === pad.activeIndex);
@@ -61,6 +69,34 @@ export function StatusBar({ creditsRef }: { creditsRef: RefObject<HTMLDivElement
         {errors > 0 && <small>{errors} tile errors</small>}
       </span>
       <span className="statusbar__group">
+        <button
+          className="statusbar__icon"
+          aria-pressed={lighting}
+          onClick={() => layersStore.set({ lighting: !lighting })}
+          aria-label="Realistic day and night (L)"
+          title={
+            lighting
+              ? 'Day and night from the Sun’s position now. Select for full daylight (L)'
+              : 'Full daylight. Select for realistic day and night (L)'
+          }
+        >
+          {lighting ? (
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M8 2a6 6 0 0 1 0 12Z" fill="currentColor" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="3" fill="currentColor" />
+              <path
+                d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
+            </svg>
+          )}
+        </button>
         <button
           className="statusbar__icon"
           disabled={!engine}

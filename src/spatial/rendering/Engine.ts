@@ -8,10 +8,13 @@ import {
   Cartographic,
   EllipsoidTerrainProvider,
   Ion,
+  JulianDate,
   Math as CesiumMath,
   Rectangle,
   RequestScheduler,
   ScreenSpaceEventType,
+  TimeInterval,
+  Transforms,
   Viewer,
   type Entity,
   type TerrainProvider,
@@ -47,10 +50,12 @@ import { ImageryManager } from '../imagery/ImageryManager';
 import { TerrariumTerrainProvider } from '../terrain/TerrariumTerrainProvider';
 import { TerrariumTileSource } from '../terrain/TerrariumTileSource';
 import { BuildingsLayer } from './BuildingsLayer';
+import { nightShadeMaterial } from './daylight';
 import { FeedLayers } from './FeedLayers';
 import { MeasureLayer } from './MeasureLayer';
 
-export type EngineAction = ButtonAction | 'select' | 'back' | 'recenter' | 'togglePanel';
+export type EngineAction =
+  ButtonAction | 'select' | 'back' | 'recenter' | 'togglePanel' | 'toggleLighting';
 
 export class Engine {
   readonly viewer: Viewer;
@@ -114,13 +119,18 @@ export class Engine {
       selectionIndicator: false,
       scene3DOnly: true,
       creditContainer,
-      // Render only when something changes: an idle globe costs almost nothing.
+      // The clock runs in real time, so the Sun lights the globe as it does now.
+      shouldAnimate: true,
+      // Render only when something changes: an idle globe costs almost nothing. The Sun
+      // moves a quarter of a degree a minute, so a frame every 10 s keeps the terminator
+      // where it is.
       requestRenderMode: true,
-      maximumRenderTimeChange: Infinity,
+      maximumRenderTimeChange: 10,
       msaaSamples: lowPower ? 1 : 4,
       contextOptions: { webgl: { powerPreference: 'high-performance' } },
     });
 
+    this.loadEarthOrientation(this.viewer.clock.currentTime);
     const scene = this.viewer.scene;
     scene.globe.depthTestAgainstTerrain = true;
     scene.globe.showGroundAtmosphere = true;
@@ -326,8 +336,9 @@ export class Engine {
     if (scene.skyAtmosphere) scene.skyAtmosphere.show = s.atmosphere;
     scene.globe.showGroundAtmosphere = s.atmosphere;
     scene.fog.enabled = s.atmosphere;
-    scene.globe.enableLighting = s.lighting;
+    this.applyLighting(s.lighting);
     savePreferences({
+      lighting: s.lighting,
       baseLayer: s.baseLayer,
       overlays: Object.entries(s.overlays)
         .filter(([, o]) => o.enabled)
@@ -335,6 +346,37 @@ export class Engine {
       knownOverlays: Object.keys(s.overlays),
     });
     scene.requestRender();
+  }
+
+  /**
+   * Cesium places the Sun in the ICRF and turns it into Earth-fixed coordinates with the IAU
+   * 2006 precession-nutation tables it ships (same origin, 67 KB per 1,000 days). Until they
+   * load it uses an approximate rotation that ignores precession since 2000 (about 0.36° by
+   * 2026).
+   */
+  private loadEarthOrientation(time: JulianDate): void {
+    const interval = new TimeInterval({
+      start: JulianDate.addDays(time, -1, new JulianDate()),
+      stop: JulianDate.addDays(time, 2, new JulianDate()),
+    });
+    Transforms.preloadIcrfFixed(interval)
+      .then(() => this.viewer.scene.requestRender())
+      .catch(() => undefined); // keep the approximate rotation
+  }
+
+  /**
+   * Realistic: the Sun's position at the clock's time shades the globe, buildings and
+   * clouds at every distance, and the night side shows city lights. Full day: all lit.
+   */
+  private applyLighting(realistic: boolean): void {
+    const globe = this.viewer.scene.globe;
+    if (globe.enableLighting === realistic && this.buildings.realisticLighting === realistic)
+      return;
+    globe.enableLighting = realistic;
+    globe.material = realistic
+      ? nightShadeMaterial(globe.lightingFadeOutDistance, globe.lightingFadeInDistance)
+      : undefined;
+    this.buildings.realisticLighting = realistic;
   }
 
   private applyRenderSettings(): void {
@@ -375,6 +417,12 @@ export class Engine {
       case 'togglePanel':
         uiStore.set((s) => ({ rightOpen: !s.rightOpen }));
         break;
+      case 'toggleLighting': {
+        const lighting = !layersStore.get().lighting;
+        layersStore.set({ lighting });
+        showToast(lighting ? 'Realistic day and night' : 'Full daylight');
+        break;
+      }
       case 'slower':
       case 'faster': {
         const speed = this.controls.changeSpeed(action === 'faster' ? 1 : -1);

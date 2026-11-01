@@ -9,6 +9,8 @@ export interface Preferences {
   overlays?: string[];
   /** Every overlay offered when `overlays` was saved; any added since start at their defaults. */
   knownOverlays?: string[];
+  /** Realistic day and night (true) or full daylight. */
+  lighting?: boolean;
   lowPower?: boolean;
   controls?: unknown;
 }

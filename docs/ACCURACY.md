@@ -135,6 +135,17 @@ disagree for real reasons:
 - **EONET**: the latest reported geometry of each open event; geometry dates default to
   00:00 UTC when the source gives no time.
 
+## Day and night
+
+The Sun's direction is Cesium's: the Simon et al. (1994) analytical series for the
+Earth–Moon barycentre, rotated from the ICRF to Earth-fixed axes with the IAU 2006
+precession-nutation model. UT1 is taken as UTC
+(at most 0.9 s, so the terminator is at most about 0.004° of longitude out), and the
+direction is to the Sun's centre, without refraction. Shading uses
+Cesium's term: full light once the Sun is about 8° above the horizon, 30% at night, on a
+sphere rather than the terrain. Twilight is therefore approximate. Black Marble lights are a
+2016 composite, not tonight's lights, at 500 m resolution.
+
 ## Precision shown
 
 Elevations are shown in whole metres (the best sources are decimetre-scale; most are
