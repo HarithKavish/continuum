@@ -6,6 +6,7 @@ import {
   fillIceSurfaceFromAncestor,
   fillSeaLevelFromAncestor,
   hornSlope,
+  inIceSheetRegion,
   lonLatToTileFraction,
   mercatorPixelSpacingMeters,
   sampleBilinear,
@@ -218,6 +219,65 @@ describe('source corrections', () => {
         blank(),
       ),
     ).toBe(0);
+  });
+
+  it('leaves the seafloor alone where the ancestor is below sea level', () => {
+    // Southern Ocean continental slope: the smoothed ancestor is 1 km shallower.
+    const seafloor = new Float32Array(size * size).fill(-3000);
+    const ancestor = new Float32Array(size * size).fill(-2000);
+    expect(
+      fillIceSurfaceFromAncestor(
+        seafloor,
+        { z: 6, x: 40, y: 58 },
+        ancestor,
+        { z: 3, x: 5, y: 7 },
+        blank(),
+      ),
+    ).toBe(0);
+    expect(seafloor.every((h) => h === -3000)).toBe(true);
+  });
+
+  it('keeps a valley floor when any nearby ancestor sample is low', () => {
+    // Ancestor plateau at 600 m cut by a one-pixel valley at 150 m (ancestor column 10).
+    // Child z6 x=40 starts at ancestor column 0, eight child pixels per ancestor pixel.
+    const ancestor = new Float32Array(size * size).fill(600);
+    for (let y = 0; y < size; y++) ancestor[y * size + 10] = 150;
+    const child = new Float32Array(size * size).fill(200);
+    const mask = blank();
+    fillIceSurfaceFromAncestor(child, { z: 6, x: 40, y: 58 }, ancestor, { z: 3, x: 5, y: 7 }, mask);
+    // Child px 87 interpolates between columns 10 and 11 (about 347 m), so the old rule
+    // raised it; the valley sample is in its window, so it keeps its floor.
+    expect(child[100 * size + 87]).toBe(200);
+    expect(mask[100 * size + 87]).toBe(0);
+    // Child px 100 (ancestor column 12) is two columns from the valley: still kept.
+    expect(child[100 * size + 100]).toBe(200);
+    // Child px 200 (ancestor column 25) has only plateau around it, so it is restored.
+    expect(child[100 * size + 200]).toBe(600);
+    expect(mask[100 * size + 200]).toBe(CORRECTION.iceSurface);
+  });
+
+  it('limits the ice-sheet regions to Antarctica and Greenland', () => {
+    const inside: [number, number][] = [
+      [-78.46, 106.83], // Vostok
+      [72.58, -38.46], // Greenland Summit
+      [67.0, -50.7], // Kangerlussuaq
+      [59.8, -43.9], // Cape Farewell
+      [70.5, -22], // Scoresby Sund
+      [78.32, -72.64], // Etah
+      [81.43, -11.33], // Nordostrundingen
+    ];
+    const outside: [number, number][] = [
+      [64.15, -21.94], // Reykjavík
+      [64.4, -16.8], // Vatnajökull
+      [66.62, -61.3], // Cape Dyer, Baffin Island
+      [79.99, -85.93], // Eureka, Ellesmere Island
+      [81.73, -64.73], // Fort Conger, Ellesmere Island
+      [82.5, -62.34], // Alert, Ellesmere Island
+      [78.22, 15.6], // Longyearbyen, Svalbard
+    ];
+    for (const [lat, lon] of inside) expect(inIceSheetRegion(lat, lon), `${lat},${lon}`).toBe(true);
+    for (const [lat, lon] of outside)
+      expect(inIceSheetRegion(lat, lon), `${lat},${lon}`).toBe(false);
   });
 
   it('converts ArcticDEM land heights from ellipsoidal to orthometric and leaves the sea alone', () => {

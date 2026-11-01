@@ -88,6 +88,8 @@ export const INSPECTION_PRIORITY = 100;
 const tileKey = (t: TileAddress) => `${t.z}/${t.x}/${t.y}`;
 const hasSource = (tile: DecodedTerrainTile, prefix: string) =>
   tile.sources.some((s) => s.startsWith(prefix));
+const onlySource = (tile: DecodedTerrainTile, prefix: string) =>
+  tile.sources.length > 0 && tile.sources.every((s) => s.startsWith(prefix));
 
 export class TerrariumTileSource {
   readonly maxZoom: number;
@@ -178,9 +180,12 @@ export class TerrariumTileSource {
       if (pixels) c.arcticDem = { pixels };
     }
 
+    // Only ETOPO1-only tiles: in mixed tiles the land comes from GMTED2010 or a finer DEM,
+    // which already carries the surface (verified: Greenland Summit reads 3 207 m in the
+    // mixed z4 tile).
     if (
       tile.z > ICE_SURFACE_ZOOM &&
-      hasSource(tile, 'etopo1/') &&
+      onlySource(tile, 'etopo1/') &&
       tileTouchesIceSheet(tile.bounds)
     ) {
       const shift = tile.z - ICE_SURFACE_ZOOM;

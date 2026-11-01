@@ -67,10 +67,15 @@ per-tile mask and the inspector says what happened at the selected point.
    include ETOPO1, if that value is below sea level. The seafloor is then shown at ETOPO1's
    1′ (~1.85 km) resolution instead of disappearing. Coastal land at exactly 0 m stays 0 m
    because its ancestor is not below sea level.
-2. **Bedrock → ice surface.** Inside Antarctica (south of 60°S) and Greenland, pixels of
-   ETOPO1-sourced tiles lying more than 50 m below the zoom-3 tile's GMTED2010 surface take
-   the zoom-3 value. This restores the ice sheet at mid zooms, at coarse resolution (zoom 3
-   pixels are ~4 km at 78°S). The threshold keeps bedrock where it is genuinely the surface.
+2. **Bedrock → ice surface.** Applies only to tiles whose sole source is ETOPO1, inside
+   Antarctica (south of 60°S) and Greenland. Greenland's region is bounded by the straits
+   to Canada and excludes Iceland; elsewhere ETOPO1 already carries the surface. A pixel
+   takes the zoom-3 tile's GMTED2010 surface only when every zoom-3 sample within 3 pixels
+   is above sea level and more than 50 m above it. This restores the ice sheet at mid zooms,
+   at coarse resolution (zoom-3 pixels are ~4 km at 78°S). Seafloor, coasts, fjords and
+   ice-free land keep their ETOPO1 values. Measured on live tiles, ice-free west Greenland
+   has 0–61 pixels raised per zoom-8 tile. The cost is that ice within about 3 zoom-3 pixels
+   of the ice edge (~5–30 km, depending on latitude) keeps ETOPO1 bedrock at zooms 5–10.
 3. **ArcticDEM datum.** In tiles that contain ArcticDEM (`pgdc_5m`), land pixels are
    converted from ellipsoidal to orthometric (H = h − N). A tile can merge ArcticDEM with
    other sources and does not say which pixel came from which, so other land pixels in such

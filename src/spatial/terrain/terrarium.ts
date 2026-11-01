@@ -106,6 +106,23 @@ export function sampleBilinear(
   return (h00 * (1 - tx) + h10 * tx) * (1 - ty) + (h01 * (1 - tx) + h11 * tx) * ty;
 }
 
+/** The lowest sample within `radius` pixels of the one containing (px, py). */
+function windowMin(
+  heights: Float32Array,
+  size: number,
+  px: number,
+  py: number,
+  radius: number,
+): number {
+  const cx = Math.max(0, Math.min(size - 1, Math.floor(px)));
+  const cy = Math.max(0, Math.min(size - 1, Math.floor(py)));
+  let lowest = Infinity;
+  for (let y = Math.max(0, cy - radius); y <= Math.min(size - 1, cy + radius); y++)
+    for (let x = Math.max(0, cx - radius); x <= Math.min(size - 1, cx + radius); x++)
+      lowest = Math.min(lowest, heights[y * size + x]!);
+  return lowest;
+}
+
 /**
  * Horn (1981) slope from a 3x3 neighbourhood of heights (row-major, metres) with the
  * given grid spacing in metres. Returns slope in degrees and aspect in degrees clockwise
@@ -152,11 +169,38 @@ export const ICE_SURFACE_ZOOM = 3;
 /** Bedrock is only replaced where the ancestor surface is at least this much higher. */
 export const ICE_SURFACE_MIN_EXCESS = 50;
 
-/** Antarctica south of 60°S, and Greenland. */
+/**
+ * Ancestor pixels on each side that must all pass that test. A narrower window raised
+ * 8 000–11 600 pixels per tile of ice-free west Greenland; this one raises 0–61 and still
+ * restores the interior and the ice shelves (measured on live z6/z8 tiles).
+ */
+export const ICE_SURFACE_WINDOW = 3;
+
+/**
+ * Where ETOPO1 Bedrock differs from the surface: the Antarctic and Greenland ice sheets.
+ * Elsewhere ETOPO1 carries the surface, ice caps included (verified: Vatnajökull reads
+ * 1 590 m at z3–6). Antarctica is everything south of 60°S. Greenland is bounded on the
+ * west by the straits that separate it from Canada and excludes Iceland, so Baffin Island,
+ * Ellesmere Island and Iceland stay outside.
+ */
 export function inIceSheetRegion(lat: number, lon: number): boolean {
-  return lat < -60 || (lat > 59 && lat < 84 && lon > -75 && lon < -10);
+  if (lat < -60) return true;
+  if (lat < 59 || lat > 84 || lon > -10) return false;
+  if (lat < 67 && lon > -30) return false; // Iceland and the Denmark Strait
+  return lon > greenlandWesternEdge(lat);
 }
 
+/** Longitude of the line down Davis Strait, Baffin Bay and Nares Strait. */
+function greenlandWesternEdge(lat: number): number {
+  if (lat < 74.5) return -60; // east of Baffin Island's Cape Dyer (61.3°W)
+  if (lat < 78.5) return -74; // west of Greenland's Cape Alexander (73.1°W)
+  // Nares Strait runs north-east past Hans Island (80.8°N 66.5°W), then Robeson Channel
+  // bends east to the Lincoln Sea. Every point on this line is water in the tiles.
+  if (lat < 81.8) return -74 + (lat - 78.5) * 3.33;
+  return Math.min(-59, -63 + (lat - 81.8) * 6.67);
+}
+
+/** Coarse pre-filter: whether a tile's bounds can contain part of inIceSheetRegion(). */
 export function tileTouchesIceSheet(bounds: [number, number, number, number]): boolean {
   const [w, s, e, n] = bounds;
   return s < -60 || (n > 59 && s < 84 && e > -75 && w < -10);
@@ -173,12 +217,13 @@ function ancestorSample(
   py: number,
   ancestor: Float32Array,
   ancestorAddress: TileAddress,
+  sample = sampleBilinear,
 ): number {
   const size = TERRARIUM_TILE_SIZE;
   const scale = 2 ** (child.z - ancestorAddress.z);
   const ax = (child.x * size + px + 0.5) / scale - ancestorAddress.x * size;
   const ay = (child.y * size + py + 0.5) / scale - ancestorAddress.y * size;
-  return sampleBilinear(ancestor, size, ax, ay);
+  return sample(ancestor, size, ax, ay);
 }
 
 /**
@@ -218,9 +263,12 @@ export function fillSeaLevelFromAncestor(
  *
  * The Terrain Tiles use ETOPO1 *Bedrock* (ETOPO1_Bed_g), so at the zooms where ETOPO1 is
  * the only source over Antarctica and Greenland the ice sheets disappear (verified: Vostok
- * reads 3 498 m at z3, −94 m at z6–10, 3 500 m at z12). Inside the ice-sheet regions,
- * pixels whose value lies more than ICE_SURFACE_MIN_EXCESS below the ancestor's GMTED2010
- * surface take the ancestor value.
+ * reads 3 498 m at z3, −87 to −95 m at z5–10, 3 500 m at z12). Inside the ice-sheet
+ * regions, a pixel takes the ancestor's GMTED2010 surface only when every ancestor sample
+ * within ICE_SURFACE_WINDOW pixels is above sea level and the pixel lies more than
+ * ICE_SURFACE_MIN_EXCESS below the lowest of them. Seafloor, coasts, fjords, valleys and
+ * ice-free land keep their own values; so does ice within that window of the ice edge,
+ * which stays at ETOPO1 bedrock. Callers apply it only to tiles whose sole source is ETOPO1.
  */
 export function fillIceSurfaceFromAncestor(
   child: Float32Array,
@@ -236,9 +284,11 @@ export function fillIceSurfaceFromAncestor(
     const lat = tileYToLat(childAddress.y + (py + 0.5) / size, childAddress.z);
     const lon = tileXToLon(childAddress.x + (px + 0.5) / size, childAddress.z);
     if (!inIceSheetRegion(lat, lon)) return;
-    const surface = ancestorSample(childAddress, px, py, ancestor, ancestorAddress);
-    if (surface - child[i]! > ICE_SURFACE_MIN_EXCESS) {
-      child[i] = surface;
+    const lowest = ancestorSample(childAddress, px, py, ancestor, ancestorAddress, (h, s, x, y) =>
+      windowMin(h, s, x, y, ICE_SURFACE_WINDOW),
+    );
+    if (lowest > 0 && lowest - child[i]! > ICE_SURFACE_MIN_EXCESS) {
+      child[i] = ancestorSample(childAddress, px, py, ancestor, ancestorAddress);
       mask[i] = (mask[i] ?? 0) | CORRECTION.iceSurface;
       count++;
     }

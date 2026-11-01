@@ -16,7 +16,7 @@ publishing needs owner actions (listed at the end) that no agent credential here
 | `pnpm typecheck` (strict) | Pass |
 | `pnpm lint` | Pass |
 | `pnpm format` | Pass |
-| `pnpm test` — 62 unit tests, 5 files | Pass |
+| `pnpm test` — 65 unit tests, 5 files | Pass |
 | `pnpm build` | Pass — 14 MB static artifact |
 | `pnpm test:e2e` — 23 browser tests, production build, live providers | Pass (23/23, 5.7 min) |
 | Browser endpoint probe (`tools/probe-endpoints.mjs`) | All integrated endpoints pass from a third-party origin |
@@ -128,13 +128,20 @@ this environment; the controller is emulated through `navigator.getGamepads`.
    unexpected aborts are reported.
 8. **Measurement:** a clockwise polygon reported the area of the rest of the Earth; area is
    now winding-independent (unit test).
+9. **Ice-surface correction scope** (found by the automated pull-request review): it ran on
+   any tile containing ETOPO1 inside a latitude/longitude box. It therefore overwrote
+   Southern Ocean seafloor (20 948 pixels of one zoom-6 tile), terrain in Iceland and Baffin
+   Island, and ice-free Greenland valleys (up to 30 592 pixels per zoom-8 tile). It now runs
+   only on ETOPO1-only tiles in Antarctica and Greenland, with a neighbourhood test.
+   Covered by unit tests and measured on live tiles.
 
 ## Known limitations
 
 - Terrain Tiles is a 2017 product with mixed, unharmonised vertical datums; most land is
   SRTM at ~30 m. Polar caps beyond ±85.05° have no terrain data.
 - The ice-surface and bathymetry corrections use coarse ancestor tiles (zoom 3 and
-  zoom ≤ 10); ArcticDEM conversion also affects other sources merged into the same tile.
+  zoom ≤ 10). Ice within ~5–30 km of the ice edge keeps ETOPO1 bedrock at zooms 5–10.
+  ArcticDEM conversion also affects other sources merged into the same tile.
 - 3D building heights are often OpenMapTiles estimates where OSM has no height tags;
   buildings are hidden when vertical exaggeration is on.
 - Labels are raster (GIBS, zoom 9) — not searchable or selectable.
