@@ -41,8 +41,8 @@ export const layersStore = createStore({
   atmosphere: true,
   /** Realistic day and night from the Sun's position now, or full daylight everywhere. */
   lighting: prefs.lighting ?? true,
-  /** Whether the live cloud layer loops its recent frames, or holds the newest. */
-  cloudsPlaying: true,
+  /** Replay the last hours of clouds; otherwise the latest hour is shown (and loaded). */
+  cloudsReplay: false,
 });
 
 export const spaceStore = createStore({
