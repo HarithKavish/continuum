@@ -89,6 +89,12 @@ Cesium objects: components read stores and call engine methods.
   failures are retried, a 404 (no data for that date) becomes a transparent tile at once,
   and a tile that still fails becomes transparent and is counted. Without this, Cesium
   abandons a failed tile for the rest of the session.
+- **One layer per job.** The default stack is 8 imagery layers: base imagery, night
+  lights, the four national aerial-photo services (each limited to its country), the
+  latest clouds, and one map layer. Every vector overlay is drawn into that one layer, so
+  water, footprints, roads, borders and names load and appear together instead of popping
+  in one after another, and cost one texture per tile. (It was 21 layers: five vector
+  overlays and ten cloud layers, frames and shadows.)
 - **Borders and place names.** `VectorOverlayProvider` is a Cesium imagery provider that
   draws OpenFreeMap vector tiles (OpenMapTiles `boundary` and `place` layers) into
   transparent tiles. Each imagery level is drawn from that zoom's data (zoom 2 is skipped
@@ -110,21 +116,23 @@ Cesium objects: components read stores and call engine methods.
   rectangle and to close-up terrain levels. Services that fill beyond their coverage with
   white have pure-white pixels made transparent. Cesium decodes tiles to bitmaps already
   flipped vertically, so that step undoes the flip before redrawing.
-- **Live clouds.** `CloudLayer` keeps one imagery layer per hourly frame (the last four
-  hours). Each frame's `CloudFrameProvider` stitches the five geostationary satellites by
-  longitude and turns infrared brightness temperature into white cloud opacity. Every
-  frame loads at opacity 0; Cesium loads but does not draw such layers. The input loop
-  crossfades between frames that are at least 80% loaded, at 15 updates a second, so the
-  globe renders only while frames change. Clouds fade out between 1 500 km and 150 km
-  altitude, and hold the newest frame in low-performance mode.
-- **Cloud shadows.** Under realistic lighting each frame also has a `CloudShadowProvider`
-  layer, beneath every cloud layer and crossfaded with its frame. Each pixel takes the cloud
+- **Live clouds.** By default `CloudLayer` shows one frame: the latest hour published.
+  When the next hour arrives it is loaded beside the old one, which stays until the new
+  frame is 80% drawn, so the clouds never blink off. "Replay 4 hours" loads the four hours
+  before it too and crossfades through them at 15 updates a second; it is off in
+  low-performance mode. Each frame's `CloudFrameProvider` stitches the five geostationary
+  satellites by longitude (`cloudSources.ts` fetches and decodes each source tile once)
+  and turns infrared brightness temperature into white cloud opacity. Clouds fade out
+  between 1 500 km and 150 km altitude; when hidden, their queued source fetches are
+  cancelled, and Cesium asks again if they are shown.
+- **Cloud shadows.** Under realistic lighting each cloud tile also carries the clouds'
+  shadows, beneath them in the same tile (`cloudShadowTile.ts`). Each pixel takes the cloud
   whose shadow falls on it: towards the Sun at the frame's time, by the cloud top's height
   over the tangent of the Sun's elevation. The height comes from the cloud-top temperature
   through the standard atmosphere, found in two steps because it depends on the cloud being
   looked for. It reads the frame's own decoded source tiles (and neighbours where a shadow
-  crosses an edge), so it adds no new kind of request, and it draws from level 4 down,
-  where an offset of tens of kilometres is more than a pixel.
+  crosses an edge), and draws from level 4 down, where an offset of tens of kilometres is
+  more than a pixel.
 
 ## Terrain pipeline
 
@@ -179,8 +187,11 @@ the live shared system, and pinning a hash would break Continuum on each release
 
 | Measure | Value (production build) |
 |---|---|
-| Initial JS (app, React, providers) | 467 KB (145 KB gzip) |
-| Engine chunk (CesiumJS), loaded lazily | 4.2 MB (1.13 MB gzip) |
+| Initial JS (app, React) | 395 KB |
+| Engine chunk (CesiumJS's `CesiumWidget`, without the Viewer's widgets), loaded lazily | 3.9 MB |
+| Data-validation chunk (zod, provider adapters), with the engine | 91 KB |
+| Inspection and geocoding, on first use | 6 KB and 1 KB |
+| First 45 s at the whole-Earth view (default layers) | 247 requests, 10.5 MB (was 384 and 20.1 MB before the layer consolidation) |
 | EGM96 grid | 937 KB, loaded once |
 | Decoded terrain cache | ≤ 160 tiles (~40 MB) |
 | Idle cost | One frame per 10 s of clock time (the Sun moves); feeds paused when the tab is hidden |

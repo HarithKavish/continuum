@@ -230,7 +230,7 @@ export const IMAGERY_LAYERS: ImageryLayerDefinition[] = [
     maximumLevel: 5,
     dated: false,
     defaultOpacity: 0.85,
-    hint: 'The last four hours, hour by hour, from five geostationary satellites. Fades out as you zoom in.',
+    hint: 'The latest hour from five geostationary satellites, with shadows under realistic lighting. Fades out as you zoom in.',
   },
   {
     providerId: 'openfreemap-water',

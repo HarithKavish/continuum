@@ -87,26 +87,22 @@ test.describe('globe, data and architecture', () => {
   }) => {
     await page.goto('/');
     await waitForEngine(page);
-    const stats = (id: string) =>
-      page.evaluate(
-        (id) =>
-          (window as any).continuum.engine.imagery.active.get(id).layers[0].imageryProvider.stats,
-        id,
-      );
+    // Every map overlay is drawn by one layer; it counts what it has drawn.
+    const stats = () => page.evaluate(() => (window as any).continuum.engine.imagery.mapStats());
     // T. Nagar, Chennai: stations, hospitals, temples and shops from OpenStreetMap.
     await setView(page, 80.2339, 13.0418, 1_200);
-    await expect
-      .poll(async () => (await stats('openfreemap-places')).pois, { timeout: 90_000 })
-      .toBeGreaterThan(0);
+    await expect.poll(async () => (await stats()).pois, { timeout: 90_000 }).toBeGreaterThan(0);
     // Greater Chennai: its reservoirs and tanks, the Adyar and the Cooum.
     await setView(page, 80.15, 13.05, 40_000);
     await expect
-      .poll(async () => (await stats('openfreemap-water')).waterAreas, { timeout: 90_000 })
+      .poll(async () => (await stats()).waterAreas, { timeout: 90_000 })
       .toBeGreaterThan(0);
-    expect((await stats('openfreemap-water')).waterways).toBeGreaterThan(0);
+    expect((await stats()).waterways).toBeGreaterThan(0);
   });
 
-  test('loops live clouds from EUMETSAT and NASA GIBS, hour by hour', async ({ page }) => {
+  test('shows the latest clouds from EUMETSAT and NASA GIBS, and replays the last hours', async ({
+    page,
+  }) => {
     const urls = { eumetsat: [] as string[], gibs: 0 };
     page.on('response', (r) => {
       if (!r.ok()) return;
@@ -124,41 +120,42 @@ test.describe('globe, data and architecture', () => {
     await expect.poll(() => urls.eumetsat.length, { timeout: 90_000 }).toBeGreaterThan(0);
     await expect.poll(() => urls.gibs, { timeout: 90_000 }).toBeGreaterThan(0);
     const frames = () =>
-      page.evaluate((): { time: string; alpha: number; show: boolean }[] =>
-        [...(window as any).continuum.engine.imagery.active.values()]
-          .find((a: any) => a.clouds)
-          .clouds.frames.map((f: any) => ({
-            time: f.time,
-            alpha: f.layer.alpha,
-            show: f.layer.show,
-          })),
+      page.evaluate(
+        (): { time: string; alpha: number; show: boolean; shadows: boolean; layer: number }[] => {
+          const engine = (window as any).continuum.engine;
+          return [...engine.imagery.active.values()]
+            .find((a: any) => a.clouds)
+            .clouds.frames.filter((f: any) => !f.retiring)
+            .map((f: any) => ({
+              time: f.time,
+              alpha: f.layer.alpha,
+              show: f.layer.show,
+              shadows: f.provider.shadows,
+              layer: engine.viewer.imageryLayers.indexOf(f.layer),
+            }));
+        },
       );
-    const times = (await frames()).map((f) => f.time);
-    expect(times).toHaveLength(5);
+    // By default only the latest hour is loaded and shown: one layer, nothing looping.
+    const latest = await frames();
+    expect(latest).toHaveLength(1);
     // Whole hours only: EUMETSAT's hourly imagery is the licence-free real-time cadence.
-    for (const t of times) expect(t).toMatch(/T\d\d:00:00Z$/);
+    expect(latest[0]!.time).toMatch(/T\d\d:00:00Z$/);
     for (const url of urls.eumetsat) expect(url).toMatch(/time=\d{4}-\d\d-\d\dT\d\d:00:00Z/);
-    // Under realistic lighting every frame casts shadows, on a layer beneath all the clouds.
-    const shadows = await page.evaluate(() => {
-      const entry = [...(window as any).continuum.engine.imagery.active.values()].find(
-        (a: any) => a.clouds,
-      );
-      return {
-        frames: entry.clouds.frames.filter((f: any) => f.shadow.show).length,
-        lowestCloud: Math.min(
-          ...entry.clouds.frames.map((f: any) =>
-            (window as any).continuum.engine.viewer.imageryLayers.indexOf(f.layer),
-          ),
-        ),
-        highestShadow: Math.max(
-          ...entry.clouds.frames.map((f: any) =>
-            (window as any).continuum.engine.viewer.imageryLayers.indexOf(f.shadow),
-          ),
-        ),
-      };
-    });
-    expect(shadows.frames).toBe(5);
-    expect(shadows.highestShadow).toBeLessThan(shadows.lowestCloud);
+    // Under realistic lighting the frame draws its clouds' shadows in the same layer.
+    expect(latest[0]!.shadows).toBe(true);
+    const fetchedBeforeReplay = urls.eumetsat.length;
+    // Replay loads the four hours before it, and loops all five.
+    await page.locator('summary', { hasText: 'Weather' }).click();
+    await page.getByRole('button', { name: 'Replay 4 hours' }).click();
+    await expect.poll(async () => (await frames()).length).toBe(5);
+    const times = (await frames()).map((f) => f.time);
+    expect(new Set(times).size).toBe(5);
+    expect(times.at(-1)).toBe(latest[0]!.time);
+    await expect
+      .poll(() => urls.eumetsat.length, { timeout: 90_000 })
+      .toBeGreaterThan(fetchedBeforeReplay);
+    await page.getByRole('button', { name: 'Show latest' }).click();
+    await expect.poll(async () => (await frames()).length).toBe(1);
     // Clouds fade out near the ground, so they never hide streets and houses.
     await setView(page, 76.28, 9.97, 20_000);
     await expect

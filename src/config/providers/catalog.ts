@@ -693,7 +693,7 @@ export const PROVIDERS: ProviderMetadata[] = [
     dataset:
       'IR 10.8 µm images from Meteosat 0° and Meteosat Indian Ocean (EUMETView WMS msg_fes:ir108, msg_iodc:ir108); Band 13 Clean Infrared from GOES-East, GOES-West and Himawari (GIBS)',
     description:
-      'Clouds from five geostationary satellites, stitched by longitude and looped over the last four hours, hour by hour.',
+      'Clouds from five geostationary satellites, stitched by longitude: the latest hour, with a replay of the last four, hour by hour.',
     documentationUrl: 'https://view.eumetsat.int/',
     homepageUrl: 'https://www.eumetsat.int/',
     endpoint: {
@@ -735,9 +735,9 @@ export const PROVIDERS: ProviderMetadata[] = [
       'Opacity is a display rule on the infrared brightness temperature (clear at 0 °C, opaque at −40 °C), not a measured cloud fraction. Warm low cloud and fog are missed, and very cold ground can read as cloud.',
       'EUMETView publishes its infrared as greyscale without a scale. Its temperatures are fitted against Himawari where both see the same clouds (grey ≈ 70 − 3.2 × T °C, 67 424 pixel pairs over the Bay of Bengal, 2026-11-01).',
       'Neighbouring satellites see clouds from different angles and at slightly different times, so seams can show along the boundary longitudes.',
-      'The loop shows real hourly frames, crossfaded; it does not interpolate motion between them.',
+      'The latest hour is shown; the replay of the last four shows real hourly frames, crossfaded, and does not interpolate motion between them.',
       'Shadows place cloud tops by temperature with the standard atmosphere (6.5 K per km), a model rather than a measured height; see docs/ACCURACY.md.',
-      'On a first visit the older frames join the loop as they load, over a minute or more; Europe and Africa (Meteosat 0°) come last. EUMETView responses are cached by the browser for seven days.',
+      'In a replay the older frames join as they load, over a minute or more; Europe and Africa (Meteosat 0°) come last. EUMETView responses are cached by the browser for seven days.',
     ],
     status: 'integrated',
   },

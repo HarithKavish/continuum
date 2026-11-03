@@ -1,9 +1,10 @@
-// A Cesium imagery provider that draws vector tiles into transparent tiles: borders, place
-// names with points of interest, roads and water from OpenFreeMap, or building footprints
-// from Overture. Each imagery level is drawn from the vector data for that zoom
-// (dataZoomFor), so detail is added and names thin out or fill in as the camera moves, and
-// text stays the same size on screen at every level — unlike a raster label layer, which
-// stops at its last zoom and is then only magnified.
+// A Cesium imagery provider that draws vector tiles into transparent tiles: water, Overture
+// building footprints, roads, borders, and place names with points of interest, all into
+// the same tile, in that order. One layer instead of one per overlay: they load and appear
+// together, and cost one texture per tile. Each imagery level is drawn from the vector data
+// for that zoom (dataZoomFor), so detail is added and names thin out or fill in as the
+// camera moves, and text stays the same size on screen at every level — unlike a raster
+// label layer, which stops at its last zoom and is then only magnified.
 
 import { Event, WebMercatorTilingScheme, type Credit } from 'cesium';
 import type { VectorTile, VectorTileFeature } from '@mapbox/vector-tile';
@@ -38,8 +39,10 @@ import {
 
 export type VectorOverlayStyle = 'boundaries' | 'places' | 'roads' | 'water' | 'buildings';
 
-/** Water is drawn from this imagery level; nothing is fetched for coarser tiles. */
+/** Water is drawn from this imagery level; nothing is fetched for it on coarser tiles. */
 const WATER_MIN_LEVEL = 6;
+/** Catalogue id named in errors from the OpenFreeMap tiles every map overlay shares. */
+const OPENFREEMAP = 'openfreemap-roads';
 
 /** Declared tile size; tiles are drawn at twice this so text stays sharp on screen. */
 const TILE = 256;
@@ -394,13 +397,18 @@ export class VectorOverlayProvider {
   readonly stats = { pois: 0, waterAreas: 0, waterways: 0 };
 
   constructor(
-    private readonly providerId: string,
-    private readonly style: VectorOverlayStyle,
+    /** What to draw, bottom to top. */
+    private readonly styles: VectorOverlayStyle[],
+    /** OpenFreeMap (OpenStreetMap), for everything but footprints. */
     readonly credit: Credit,
+    /** Overture, credited on the tiles that draw its footprints. */
+    private readonly buildingsCredit: Credit,
   ) {}
 
-  getTileCredits(): undefined {
-    return undefined;
+  getTileCredits(_x: number, _y: number, level: number): Credit[] | undefined {
+    return this.styles.includes('buildings') && level >= BUILDING_MIN_LEVEL
+      ? [this.buildingsCredit]
+      : undefined;
   }
 
   pickFeatures(): undefined {
@@ -409,32 +417,54 @@ export class VectorOverlayProvider {
 
   async requestImage(x: number, y: number, level: number): Promise<HTMLCanvasElement> {
     const canvas = Object.assign(document.createElement('canvas'), { width: PX, height: PX });
-    const buildings = this.style === 'buildings';
-    if (buildings && level < BUILDING_MIN_LEVEL) return canvas;
-    if (this.style === 'water' && level < WATER_MIN_LEVEL) return canvas;
-    const dz = buildings ? Math.min(level, OVERTURE_MAX_ZOOM) : dataZoomFor(level);
-    const shift = level - dz;
-    const data = buildings
-      ? await fetchBuildingFootprints(dz, x >> shift, y >> shift)
-      : await fetchVectorTile(this.providerId, dz, x >> shift, y >> shift);
-    if (!data) return canvas;
+    const drawn = this.styles.filter(
+      (style) =>
+        (style !== 'buildings' || level >= BUILDING_MIN_LEVEL) &&
+        (style !== 'water' || level >= WATER_MIN_LEVEL),
+    );
+    if (!drawn.length) return canvas;
+    const mapZoom = dataZoomFor(level);
+    const buildingZoom = Math.min(level, OVERTURE_MAX_ZOOM);
+    const wantsMap = drawn.some((style) => style !== 'buildings');
+    const [map, footprints] = await Promise.all([
+      wantsMap
+        ? fetchVectorTile(OPENFREEMAP, mapZoom, x >> (level - mapZoom), y >> (level - mapZoom))
+        : null,
+      drawn.includes('buildings')
+        ? fetchBuildingFootprints(
+            buildingZoom,
+            x >> (level - buildingZoom),
+            y >> (level - buildingZoom),
+          )
+        : null,
+    ]);
+    if (!map && !footprints) return canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
-    if (this.style !== 'boundaries' && this.style !== 'buildings') await document.fonts.ready;
-    // Data-tile units → this tile's canvas pixels.
-    const toCanvas = (extent: number) => {
+    if (map && drawn.some((s) => s === 'places' || s === 'roads' || s === 'water'))
+      await document.fonts.ready;
+    // Data-tile units (at `dz`) → this tile's canvas pixels.
+    const toCanvas = (dz: number) => (extent: number) => {
+      const shift = level - dz;
       const k = (2 ** shift * PX) / extent;
       const ox = (x - ((x >> shift) << shift)) * PX;
       const oy = (y - ((y >> shift) << shift)) * PX;
       return (px: number, py: number): [number, number] => [px * k - ox, py * k - oy];
     };
-    if (this.style === 'boundaries')
-      this.drawBoundaries(ctx, decodeBoundaries(data), level, toCanvas);
-    else if (this.style === 'places')
-      this.drawPlaces(ctx, decodePlaces(data), decodePoints(data), level, toCanvas);
-    else if (this.style === 'roads') this.drawRoads(ctx, decodeRoads(data), level, toCanvas);
-    else if (this.style === 'water') this.drawWater(ctx, decodeWater(data), level, toCanvas);
-    else this.drawBuildings(ctx, decodeBuildings(data), level, toCanvas);
+    for (const style of drawn) {
+      if (style === 'buildings') {
+        if (footprints)
+          this.drawBuildings(ctx, decodeBuildings(footprints), level, toCanvas(buildingZoom));
+        continue;
+      }
+      if (!map) continue;
+      const project = toCanvas(mapZoom);
+      if (style === 'water') this.drawWater(ctx, decodeWater(map), level, project);
+      else if (style === 'roads') this.drawRoads(ctx, decodeRoads(map), level, project);
+      else if (style === 'boundaries')
+        this.drawBoundaries(ctx, decodeBoundaries(map), level, project);
+      else this.drawPlaces(ctx, decodePlaces(map), decodePoints(map), level, project);
+    }
     return canvas;
   }
 

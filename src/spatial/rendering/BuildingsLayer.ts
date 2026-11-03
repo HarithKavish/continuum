@@ -13,7 +13,7 @@ import {
   PolygonGeometry,
   PolygonHierarchy,
   Primitive,
-  type Viewer,
+  type CesiumWidget,
 } from 'cesium';
 import { appConfig } from '../../config/application';
 import { feedsStore } from '../../core/state/appState';
@@ -36,11 +36,13 @@ interface TileEntry {
 export class BuildingsLayer {
   private readonly tiles = new Map<string, TileEntry>();
   private visible = true;
+  /** Whether the camera is near enough the ground for buildings (with hysteresis). */
+  private near = false;
   private realistic = false;
   private appearance: Appearance = buildingAppearance(false);
 
   constructor(
-    private readonly viewer: Viewer,
+    private readonly viewer: CesiumWidget,
     private readonly terrain: TerrariumTileSource,
   ) {}
 
@@ -65,7 +67,10 @@ export class BuildingsLayer {
     exaggeration: number,
   ): void {
     const s = feedsStore.get().buildings;
-    const near = heightAboveGround <= appConfig.buildings.maxCameraHeight;
+    // Buildings appear below the threshold and go a third above it, so a camera hovering
+    // near it does not make them flicker on and off.
+    const limit = appConfig.buildings.maxCameraHeight * (this.near ? 4 / 3 : 1);
+    const near = (this.near = heightAboveGround <= limit);
     // Primitives are not vertically exaggerated, so they would float or sink on exaggerated terrain.
     const show = s.enabled && near && exaggeration === 1 && centre !== null;
     if (!show) {
