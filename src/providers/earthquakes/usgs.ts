@@ -7,16 +7,8 @@ import type { ObservationRecord } from '../base/types';
 
 export const PROVIDER_ID = 'usgs-earthquakes';
 
-export const EARTHQUAKE_FEEDS = {
-  all_day: 'All, past day',
-  '2.5_day': 'M2.5+, past day',
-  '2.5_week': 'M2.5+, past 7 days',
-  '4.5_week': 'M4.5+, past 7 days',
-  '4.5_month': 'M4.5+, past 30 days',
-  significant_month: 'Significant, past 30 days',
-} as const;
-
-export type EarthquakeFeed = keyof typeof EARTHQUAKE_FEEDS;
+export { EARTHQUAKE_FEEDS, type EarthquakeFeed } from '../../config/feeds';
+import type { EarthquakeFeed } from '../../config/feeds';
 
 const feature = z.object({
   id: z.string(),

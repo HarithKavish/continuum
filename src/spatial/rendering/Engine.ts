@@ -1,11 +1,13 @@
 // The Cesium scene and everything attached to it. React components never touch Cesium
 // directly; they read stores and call methods here.
 
-import 'cesium/Build/Cesium/Widgets/widgets.css';
+// Cesium's own widget styles only: Continuum uses none of the Viewer's widgets.
+import 'cesium/Build/Cesium/Widgets/CesiumWidget/CesiumWidget.css';
 import {
   Cartesian2,
   Cartesian3,
   Cartographic,
+  CesiumWidget,
   ClockRange,
   EllipsoidTerrainProvider,
   Ion,
@@ -16,7 +18,6 @@ import {
   ScreenSpaceEventType,
   TimeInterval,
   Transforms,
-  Viewer,
   type Entity,
   type PerspectiveFrustum,
   type TerrainProvider,
@@ -79,7 +80,8 @@ export type EngineAction =
 const EARTH_HANDBACK_DISTANCE = 2.2 * 6_378_137;
 
 export class Engine {
-  readonly viewer: Viewer;
+  /** Cesium's globe widget (named `viewer` for the diagnostics and tests that read it). */
+  readonly viewer: CesiumWidget;
   readonly terrainSource: TerrariumTileSource;
   readonly terrainProvider: TerrariumTerrainProvider;
   readonly imagery: ImageryManager;
@@ -131,19 +133,11 @@ export class Engine {
     });
 
     const lowPower = statusStore.get().lowPower;
-    this.viewer = new Viewer(container, {
+    // CesiumWidget rather than Viewer: the same globe, clock and data sources without the
+    // Viewer's widgets (and their Knockout dependency), which Continuum never shows.
+    this.viewer = new CesiumWidget(container, {
       baseLayer: false,
       terrainProvider: this.terrainProvider as unknown as TerrainProvider,
-      animation: false,
-      timeline: false,
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false,
       scene3DOnly: true,
       creditContainer,
       // The clock runs in real time, so the Sun lights the globe as it does now.
@@ -165,9 +159,7 @@ export class Engine {
     scene.screenSpaceCameraController.minimumZoomDistance = 20;
     scene.screenSpaceCameraController.maximumZoomDistance =
       appConfig.navigation.maxCameraHeightMeters;
-    this.viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
-      ScreenSpaceEventType.LEFT_DOUBLE_CLICK,
-    );
+    this.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
     this.imagery = new ImageryManager(this.viewer);
     this.imagery.onError = () => statusStore.set({ imageryErrors: this.imagery.errorCount });
@@ -313,11 +305,15 @@ export class Engine {
       this.viewer.scene.requestRender();
     }
 
-    // The live cloud loop: it renders only while frames change, and holds the newest frame
-    // in low-power mode.
-    this.imagery.cloudsPlaying = layersStore.get().cloudsPlaying && !statusStore.get().lowPower;
-    this.imagery.cloudShadows = layersStore.get().lighting;
-    if (this.imagery.tick(dt, this.viewer.camera.positionCartographic.height))
+    // Night lights for the camera height, and the clouds: the latest hour, or a replay of
+    // the last hours (never in low-power mode). They render only while something changes.
+    if (
+      this.imagery.tick(
+        dt,
+        this.viewer.camera.positionCartographic.height,
+        statusStore.get().lowPower,
+      )
+    )
       this.viewer.scene.requestRender();
     const cloudTime = this.imagery.cloudTime();
     if (cloudTime !== statusStore.get().cloudTime) statusStore.set({ cloudTime });
@@ -725,7 +721,7 @@ export class Engine {
   // ---------------------------------------------------------------- picking
 
   private installPointerHandlers(): void {
-    const handler = this.viewer.cesiumWidget.screenSpaceEventHandler;
+    const handler = this.viewer.screenSpaceEventHandler;
     handler.setInputAction(
       (e: { position: Cartesian2 }) => this.handleClick(e.position),
       ScreenSpaceEventType.LEFT_CLICK,

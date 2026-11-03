@@ -10,7 +10,6 @@ import {
   ProviderError,
   type ObservationRecord,
 } from '../../providers/base/types';
-import { searchPlaces } from '../../providers/geocoding/nominatim';
 import { formatLatLon, parseCoordinates } from '../../spatial/coordinates/coordinates';
 import { selectionStore, uiStore } from '../../core/state/appState';
 
@@ -58,6 +57,8 @@ export function SearchBox() {
     }
     setState('searching');
     try {
+      // The geocoder (and its response checks) loads with the first search.
+      const { searchPlaces } = await import('../../providers/geocoding/nominatim');
       const places = await searchPlaces(text, controller.signal);
       setResults([...out, ...places.map((place) => ({ kind: 'place' as const, place }))]);
       setState('done');

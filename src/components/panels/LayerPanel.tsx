@@ -10,8 +10,7 @@ import {
   useStatus,
   useUi,
 } from '../../core/state/hooks';
-import { EARTHQUAKE_FEEDS, type EarthquakeFeed } from '../../providers/earthquakes/usgs';
-import { EONET_CATEGORIES } from '../../providers/natural-events/eonet';
+import { EARTHQUAKE_FEEDS, EONET_CATEGORIES, type EarthquakeFeed } from '../../config/feeds';
 import { DEPTH_CLASSES, EVENT_COLORS } from '../../spatial/rendering/palettes';
 import { mercatorPixelSpacingMeters } from '../../spatial/terrain/terrarium';
 import { relativeTime, Section, Slider, Status, Toggle } from '../common/ui';
@@ -171,26 +170,27 @@ function DateField({ visible, value, max }: { visible: boolean; value: string; m
   );
 }
 
-/** Play or hold the cloud loop, and say which hour is on screen. */
+/** The latest hour, or a replay of the last four; and which hour is on screen. */
 function CloudControls() {
-  const playing = useLayers((s) => s.cloudsPlaying);
+  const replay = useLayers((s) => s.cloudsReplay);
   const lowPower = useStatus((s) => s.lowPower);
   const time = useStatus((s) => s.cloudTime);
+  const replaying = replay && !lowPower;
   return (
     <div className="button-row">
       <button
         className="button button--secondary button--small"
-        onClick={() => layersStore.set((s) => ({ cloudsPlaying: !s.cloudsPlaying }))}
+        onClick={() => layersStore.set((s) => ({ cloudsReplay: !s.cloudsReplay }))}
         disabled={lowPower}
-        aria-pressed={playing && !lowPower}
+        aria-pressed={replaying}
       >
-        {playing && !lowPower ? 'Pause' : 'Play'}
+        {replaying ? 'Show latest' : 'Replay 4 hours'}
       </button>
       <small className="hint" aria-live="off">
         {time
           ? `Showing ${time.slice(11, 16)} UTC (${relativeTime(time)})`
           : 'Waiting for the first frame…'}
-        {lowPower && ' · paused in low-performance mode'}
+        {lowPower && ' · latest only in low-performance mode'}
       </small>
     </div>
   );
@@ -229,7 +229,7 @@ function OverlaySection({ group }: { group: ImageryLayerDefinition['group'] }) {
               </div>
             )}
             {o.enabled && d.kind === 'clouds' && <CloudControls />}
-            {o.enabled && (
+            {o.enabled && d.kind !== 'vector' && (
               <Slider
                 label="Opacity"
                 value={o.opacity}

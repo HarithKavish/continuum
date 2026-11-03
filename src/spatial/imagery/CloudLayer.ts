@@ -1,28 +1,33 @@
-// The live cloud layer: one imagery layer per recent frame time, all loading at once, and
-// a loop that crossfades from each frame to the next so the clouds move as the satellites
-// saw them. Only real frames are shown; the crossfade blends two neighbouring frames and
-// invents no motion between them. Under realistic lighting each frame also casts its
-// shadows on the ground (CloudShadowProvider), on a layer beneath all the clouds.
+// The live cloud layer. By default it shows the latest hour the satellites have published,
+// and when the next hour arrives it keeps the old frame until the new one has drawn, so the
+// clouds never blink off. On request it replays the last hours: one imagery layer per frame,
+// crossfading from each to the next so the clouds move as the satellites saw them. Only
+// real frames are shown; the crossfade blends two neighbouring frames and invents no
+// motion between them.
 
 import { ImageryLayer, type Credit, type ImageryLayerCollection } from 'cesium';
 import { CloudFrameProvider } from './CloudFrameProvider';
-import { CloudShadowProvider } from './CloudShadowProvider';
 import { altitudeFade, frameWeights } from './cloudImagery';
+import { cancelFrame } from './cloudSources';
 
-/** Share of a frame's requested tiles that must be drawn before it joins the loop. */
+/** Share of a frame's requested tiles that must be drawn before it is shown. */
 const READY_SHARE = 0.8;
-/** Alpha updates per second while playing; each one costs a render. */
+/** Alpha updates per second while replaying; each one costs a render. */
 const UPDATES_PER_SECOND = 15;
 
+interface Frame {
+  time: string;
+  layer: ImageryLayer;
+  provider: CloudFrameProvider;
+  /** Replaced (a new hour, or shadows switched): shown only until a wanted frame is ready. */
+  retiring: boolean;
+}
+
 export class CloudLayer {
-  private frames: {
-    time: string;
-    layer: ImageryLayer;
-    provider: CloudFrameProvider;
-    shadow: ImageryLayer;
-  }[] = [];
+  private frames: Frame[] = [];
   private seconds = 0;
   private sinceUpdate = Infinity;
+  private shown = false;
   /** Frame time currently dominating the view, for the interface. */
   shownTime: string | null = null;
 
@@ -32,104 +37,104 @@ export class CloudLayer {
     private readonly wrap: (provider: CloudFrameProvider) => void,
   ) {}
 
-  /** Shadows first, then clouds: every shadow is drawn beneath every cloud. */
   get layers(): ImageryLayer[] {
-    return [...this.frames.map((f) => f.shadow), ...this.frames.map((f) => f.layer)];
+    return this.frames.map((f) => f.layer);
   }
 
-  /** Match the frames to `times` (oldest first), keeping layers that are already loaded. */
-  setTimes(times: string[]): void {
-    const kept = new Map(this.frames.map((f) => [f.time, f]));
-    this.frames = times.map((time, i) => {
-      const existing = kept.get(time);
-      kept.delete(time);
+  /**
+   * Show these frame times (oldest first), with or without shadows. Frames already loaded
+   * are kept; frames no longer wanted stay until a wanted one is ready.
+   */
+  setTimes(times: string[], shadows: boolean): void {
+    const reusable = new Map(
+      this.frames
+        .filter((f) => !f.retiring && f.provider.shadows === shadows)
+        .map((f) => [f.time, f]),
+    );
+    const wanted = times.map((time, i) => {
+      const existing = reusable.get(time);
       if (existing) return existing;
-      // The newest frame is requested first, so clouds appear before the loop is ready.
-      const provider = new CloudFrameProvider(time, this.credit, i);
+      // The newest frame is requested first, so clouds appear before older frames load.
+      const provider = new CloudFrameProvider(time, this.credit, i, shadows);
       this.wrap(provider);
-      const layer = new ImageryLayer(provider as never, { alpha: 0 });
-      const shadowProvider = new CloudShadowProvider(time, this.credit, i);
-      this.wrap(shadowProvider as never);
-      const shadow = new ImageryLayer(shadowProvider as never, { alpha: 0, show: false });
-      this.collection.add(shadow);
+      const layer = new ImageryLayer(provider as never, { alpha: 0, show: this.shown });
       this.collection.add(layer);
-      return { time, layer, provider, shadow };
+      return { time, layer, provider, retiring: false };
     });
-    for (const f of kept.values()) {
+    const retiring = this.frames.filter((f) => !wanted.includes(f));
+    for (const f of retiring) f.retiring = true;
+    this.frames = [...retiring, ...wanted];
+  }
+
+  private ready(f: Frame): boolean {
+    const { completed, pending } = f.provider;
+    return completed > 0 && completed >= READY_SHARE * (completed + pending);
+  }
+
+  /** Remove frames, cancelling their queued fetches unless a remaining frame shares them. */
+  private drop(frames: Frame[]): void {
+    for (const f of frames) {
       this.collection.remove(f.layer, true);
-      this.collection.remove(f.shadow, true);
+      this.frames.splice(this.frames.indexOf(f), 1);
     }
+    for (const f of frames) if (!this.frames.some((g) => g.time === f.time)) cancelFrame(f.time);
   }
 
   /**
-   * Frames with most of the current view drawn. Only these join the loop: EUMETView renders
-   * every request on demand, so on a first visit the older frames can trail the newest by a
-   * minute or more, and looping over a half-drawn frame would blink clouds on and off.
+   * Show the right frame (or, when replaying, advance the loop) and set each frame's
+   * opacity. Returns true when anything visible changed, so the caller can request a render.
    */
-  private readyFrames(): number[] {
-    const ready: number[] = [];
-    this.frames.forEach((f, i) => {
-      const { completed, pending } = f.provider;
-      if (completed > 0 && completed >= READY_SHARE * (completed + pending)) ready.push(i);
-    });
-    return ready;
-  }
-
-  /**
-   * Advance the loop and set each frame's opacity. Returns true when anything visible
-   * changed, so the caller can request a render.
-   */
-  update(
-    dtSeconds: number,
-    playing: boolean,
-    opacity: number,
-    cameraHeight: number,
-    shadows: boolean,
-  ): boolean {
+  update(dtSeconds: number, replay: boolean, opacity: number, cameraHeight: number): boolean {
     const visible = opacity * altitudeFade(cameraHeight);
     const show = visible > 0;
     let changed = false;
-    for (const f of this.frames) {
-      if (f.layer.show !== show) {
-        f.layer.show = show; // hidden frames stop loading tiles
-        changed = true;
-      }
-      if (f.shadow.show !== (show && shadows)) {
-        f.shadow.show = show && shadows;
-        changed = true;
+    if (show !== this.shown) {
+      this.shown = show;
+      changed = true;
+      for (const f of this.frames) {
+        f.layer.show = show; // hidden frames stop requesting tiles
+        if (!show) cancelFrame(f.time); // and drop the fetches still queued for them
       }
     }
-    if (playing) this.seconds += dtSeconds;
+    const wanted = this.frames.filter((f) => !f.retiring);
+    const readyWanted = wanted.filter((f) => this.ready(f));
+    const retiring = this.frames.filter((f) => f.retiring);
+    if (retiring.length && readyWanted.length) {
+      this.drop(retiring);
+      changed = true;
+    }
+    if (replay) this.seconds += dtSeconds;
     this.sinceUpdate += dtSeconds;
     if (!changed && this.sinceUpdate < 1 / UPDATES_PER_SECOND) return false;
     this.sinceUpdate = 0;
-    const ready = this.readyFrames();
-    const weights = new Array<number>(this.frames.length).fill(0);
-    if (playing && ready.length >= 2) {
-      frameWeights(ready.length, this.seconds).forEach((w, k) => (weights[ready[k]!] = w));
+
+    const weights = new Map<Frame, number>();
+    if (replay && readyWanted.length >= 2) {
+      frameWeights(readyWanted.length, this.seconds).forEach((w, k) =>
+        weights.set(readyWanted[k]!, w),
+      );
     } else {
-      // Hold the newest frame that has drawn something (a new hour starts empty).
-      weights[ready.at(-1) ?? this.frames.length - 1] = 1;
+      // The newest wanted frame that has drawn, else the frame it replaces, else the newest
+      // (a new hour starts empty).
+      const hold =
+        readyWanted.at(-1) ?? this.frames.filter((f) => this.ready(f)).at(-1) ?? wanted.at(-1);
+      if (hold) weights.set(hold, 1);
     }
-    let dominant = 0;
-    this.frames.forEach((f, i) => {
-      const alpha = visible * weights[i]!;
+    let dominant: Frame | undefined;
+    for (const f of this.frames) {
+      const w = weights.get(f) ?? 0;
+      const alpha = visible * w;
       if (Math.abs(f.layer.alpha - alpha) > 1e-3) {
         f.layer.alpha = alpha;
-        f.shadow.alpha = alpha;
         changed = true;
       }
-      if (weights[i]! > weights[dominant]!) dominant = i;
-    });
-    this.shownTime = this.frames[dominant]?.time ?? null;
+      if (!dominant || w > (weights.get(dominant) ?? 0)) dominant = f;
+    }
+    this.shownTime = dominant?.time ?? null;
     return changed;
   }
 
   destroy(): void {
-    for (const f of this.frames) {
-      this.collection.remove(f.layer, true);
-      this.collection.remove(f.shadow, true);
-    }
-    this.frames = [];
+    this.drop([...this.frames]);
   }
 }

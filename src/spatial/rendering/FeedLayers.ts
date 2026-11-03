@@ -16,7 +16,7 @@ import {
   VerticalOrigin,
   Cartesian2,
   type Entity,
-  type Viewer,
+  type CesiumWidget,
 } from 'cesium';
 import { appConfig } from '../../config/application';
 import { createPoller, type Poller } from '../../core/lifecycle/poller';
@@ -40,7 +40,7 @@ export class FeedLayers {
   private lastQuakeFeed: string;
   private lastCategories: string;
 
-  constructor(private readonly viewer: Viewer) {
+  constructor(private readonly viewer: CesiumWidget) {
     void viewer.dataSources.add(this.earthquakes);
     void viewer.dataSources.add(this.events);
     void viewer.dataSources.add(this.highlight);
