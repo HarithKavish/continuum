@@ -1,101 +1,18 @@
 // A Cesium imagery provider for one moment of the live cloud layer: each tile is stitched
 // from the geostationary satellites that see it (cloudImagery.SATELLITES), every pixel
 // decoded to its infrared brightness temperature and drawn as white cloud with the
-// opacity cloudOpacity() gives it. One provider per frame time; CloudLayer animates them.
+// opacity cloudOpacity() gives it. Under realistic lighting the same tile also carries the
+// clouds' shadows (cloudShadowTile.ts) beneath them, so one layer draws both. One provider
+// per frame time; CloudLayer shows and crossfades them.
 
 import { Event, WebMercatorTilingScheme, type Credit } from 'cesium';
-import { LruCache } from '../../core/net/LruCache';
-import { RequestQueue } from '../../core/net/RequestQueue';
 import { sampleBilinear, tileXToLon } from '../terrain/terrarium';
-import {
-  cloudOpacity,
-  eumetsatTemperature,
-  gibsTemperature,
-  satelliteFor,
-  type CloudSource,
-} from './cloudImagery';
+import { satelliteFor } from './cloudImagery';
+import { subsolarPoint } from './cloudShadow';
+import { shadowAlpha } from './cloudShadowTile';
+import { CLOUD_MAX_LEVEL, EUMETSAT_MAX_LEVEL, sourceOpacity, TILE } from './cloudSources';
 
-export const TILE = 256;
-/** Satellite infrared is ~2 km per pixel at best; deeper tiles would only magnify it. */
-export const CLOUD_MAX_LEVEL = 5;
-/**
- * EUMETView renders every request on demand and took 1–15 s per 256-pixel tile (measured
- * 2026-11-01), so Meteosat is requested no deeper than this and resampled beyond it.
- */
-export const EUMETSAT_MAX_LEVEL = 3;
-const MERCATOR_HALF = 20037508.342789244;
-
-// Per host, so slow EUMETView requests never hold up GIBS.
-const queues = {
-  gibs: new RequestQueue('clouds-gibs', 6),
-  eumetsat: new RequestQueue('clouds-eumetsat', 6),
-};
-
-export function sourceUrl(
-  source: CloudSource,
-  time: string,
-  x: number,
-  y: number,
-  z: number,
-): string {
-  if (source.kind === 'gibs')
-    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${source.layer}/default/${time}/GoogleMapsCompatible_Level6/${z}/${y}/${x}.png`;
-  const size = (2 * MERCATOR_HALF) / 2 ** z;
-  const minX = -MERCATOR_HALF + x * size;
-  const maxY = MERCATOR_HALF - y * size;
-  const bbox = [minX, maxY - size, minX + size, maxY].join(',');
-  return `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=${source.layer}&styles=&crs=EPSG:3857&bbox=${bbox}&width=${TILE}&height=${TILE}&format=image/png&time=${time}`;
-}
-
-// Decoded source tiles, one byte of opacity per pixel (64 KB each): a coarse Meteosat tile
-// serves every deeper tile under it, and every frame of the loop is redrawn as the view moves.
-const cache = new LruCache<Uint8Array>(400);
-
-/** A source tile decoded to cloud opacity (0–255) per pixel, or null where it has none. */
-export async function sourceOpacity(
-  source: CloudSource,
-  url: string,
-  priority: number,
-): Promise<Uint8Array | null> {
-  const cached = cache.get(url);
-  if (cached) return cached;
-  const grid = await queues[source.kind].enqueue(
-    url,
-    async (signal) => {
-      const response = await fetch(url, { signal, mode: 'cors', credentials: 'omit' });
-      // A failed request is not an absence of cloud: throw, so the imagery layer retries
-      // the tile, and cache nothing. A WMS exception (a time not yet published) means no
-      // data for now, and is not cached either.
-      if (!response.ok) throw new Error(`Cloud tile: HTTP ${response.status}`);
-      if (!response.headers.get('content-type')?.startsWith('image/')) return null;
-      const bitmap = await createImageBitmap(await response.blob());
-      const canvas = Object.assign(document.createElement('canvas'), {
-        width: TILE,
-        height: TILE,
-      });
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-      ctx.drawImage(bitmap, 0, 0, TILE, TILE);
-      bitmap.close();
-      const px = ctx.getImageData(0, 0, TILE, TILE).data;
-      const opacity = new Uint8Array(TILE * TILE);
-      for (let i = 0; i < opacity.length; i++) {
-        const j = i * 4;
-        opacity[i] = Math.round(
-          255 *
-            cloudOpacity(
-              source.kind === 'gibs'
-                ? gibsTemperature(px[j]!, px[j + 1]!, px[j + 2]!, px[j + 3]!)
-                : eumetsatTemperature(px[j]!),
-            ),
-        );
-      }
-      return opacity;
-    },
-    priority,
-  );
-  if (grid) cache.set(url, grid);
-  return grid;
-}
+export { CLOUD_MAX_LEVEL } from './cloudSources';
 
 export class CloudFrameProvider {
   readonly tilingScheme = new WebMercatorTilingScheme();
@@ -111,6 +28,7 @@ export class CloudFrameProvider {
   /** Tiles still being fetched for this frame, and tiles drawn so far. */
   pending = 0;
   completed = 0;
+  private readonly sun: { lat: number; lon: number };
 
   constructor(
     /** Frame time, ISO 8601 UTC. */
@@ -118,7 +36,11 @@ export class CloudFrameProvider {
     readonly credit: Credit,
     /** Request priority: the newest frame loads first. */
     private readonly priority: number,
-  ) {}
+    /** Draw the clouds' shadows beneath them (realistic lighting). */
+    readonly shadows: boolean,
+  ) {
+    this.sun = subsolarPoint(new Date(time));
+  }
 
   getTileCredits(): undefined {
     return undefined;
@@ -131,15 +53,19 @@ export class CloudFrameProvider {
   async requestImage(x: number, y: number, level: number): Promise<HTMLCanvasElement> {
     this.pending++;
     try {
-      const canvas = await this.draw(x, y, level);
+      const [cloud, shadow] = await Promise.all([
+        this.cloudAlpha(x, y, level),
+        this.shadows ? shadowAlpha(this.time, this.sun, x, y, level, this.priority) : null,
+      ]);
       this.completed++;
-      return canvas;
+      return composite(cloud, shadow);
     } finally {
       this.pending--;
     }
   }
 
-  private async draw(x: number, y: number, level: number): Promise<HTMLCanvasElement> {
+  /** Cloud opacity (0–255) for each pixel of a tile. */
+  private async cloudAlpha(x: number, y: number, level: number): Promise<Uint8Array> {
     // Which satellite draws each pixel column of this tile.
     const columns = Array.from({ length: TILE }, (_, px) =>
       satelliteFor(tileXToLon(x + (px + 0.5) / TILE, level)),
@@ -152,7 +78,10 @@ export class CloudFrameProvider {
           const shift = level - z;
           const grid = await sourceOpacity(
             s.source,
-            sourceUrl(s.source, this.time, x >> shift, y >> shift, z),
+            this.time,
+            x >> shift,
+            y >> shift,
+            z,
             this.priority,
           );
           // This tile's offset and scale within the (possibly coarser) source tile.
@@ -163,23 +92,36 @@ export class CloudFrameProvider {
         }),
       ),
     );
-    const canvas = Object.assign(document.createElement('canvas'), { width: TILE, height: TILE });
-    const ctx = canvas.getContext('2d')!;
-    const out = ctx.createImageData(TILE, TILE);
+    const alpha = new Uint8Array(TILE * TILE);
     for (let px = 0; px < TILE; px++) {
       const source = sources.get(columns[px]!);
       if (!source?.grid) continue;
       const u = (source.ox + px + 0.5) / source.scale;
-      for (let py = 0; py < TILE; py++) {
-        const i = (py * TILE + px) * 4;
-        out.data[i] = out.data[i + 1] = out.data[i + 2] = 255;
-        out.data[i + 3] =
+      for (let py = 0; py < TILE; py++)
+        alpha[py * TILE + px] =
           source.scale === 1
             ? source.grid[py * TILE + px]!
             : sampleBilinear(source.grid, TILE, u, (source.oy + py + 0.5) / source.scale);
-      }
     }
-    ctx.putImageData(out, 0, 0);
-    return canvas;
+    return alpha;
   }
+}
+
+/** White cloud over black shadow, as one straight-alpha tile. */
+function composite(cloud: Uint8Array, shadow: Uint8Array | null): HTMLCanvasElement {
+  const canvas = Object.assign(document.createElement('canvas'), { width: TILE, height: TILE });
+  const ctx = canvas.getContext('2d')!;
+  const out = ctx.createImageData(TILE, TILE);
+  for (let i = 0; i < cloud.length; i++) {
+    const c = cloud[i]! / 255;
+    const s = shadow ? shadow[i]! / 255 : 0;
+    const a = c + s * (1 - c);
+    if (a === 0) continue;
+    const grey = Math.round((255 * c) / a);
+    const j = i * 4;
+    out.data[j] = out.data[j + 1] = out.data[j + 2] = grey;
+    out.data[j + 3] = Math.round(255 * a);
+  }
+  ctx.putImageData(out, 0, 0);
+  return canvas;
 }

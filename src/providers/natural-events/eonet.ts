@@ -6,21 +6,7 @@ import type { ObservationRecord } from '../base/types';
 
 export const PROVIDER_ID = 'nasa-eonet';
 
-export const EONET_CATEGORIES = {
-  wildfires: 'Wildfires',
-  severeStorms: 'Severe storms',
-  volcanoes: 'Volcanoes',
-  seaLakeIce: 'Sea and lake ice',
-  floods: 'Floods',
-  earthquakes: 'Earthquakes',
-  landslides: 'Landslides',
-  drought: 'Drought',
-  dustHaze: 'Dust and haze',
-  snow: 'Snow',
-  tempExtremes: 'Temperature extremes',
-  waterColor: 'Water colour',
-  manmade: 'Manmade',
-} as const;
+export { EONET_CATEGORIES } from '../../config/feeds';
 
 const geometry = z.object({
   magnitudeValue: z.number().nullable().optional(),

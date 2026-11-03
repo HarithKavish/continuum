@@ -13,7 +13,7 @@ import {
   LabelStyle,
   PolygonHierarchy,
   VerticalOrigin,
-  type Viewer,
+  type CesiumWidget,
 } from 'cesium';
 import type { Tool } from '../../core/state/appState';
 import { formatDistance, geodesicInverse } from '../measurements/geodesic';
@@ -23,7 +23,7 @@ export class MeasureLayer {
   readonly source = new CustomDataSource('measurement');
   readonly marker = new CustomDataSource('inspection-marker');
 
-  constructor(private readonly viewer: Viewer) {
+  constructor(private readonly viewer: CesiumWidget) {
     void viewer.dataSources.add(this.source);
     void viewer.dataSources.add(this.marker);
   }
